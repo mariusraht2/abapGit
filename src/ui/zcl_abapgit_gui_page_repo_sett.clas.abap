@@ -52,12 +52,12 @@ CLASS zcl_abapgit_gui_page_repo_sett DEFINITION
         VALUE(rt_post_fields) TYPE tihttpnvp .
     METHODS render_dot_abapgit_reqs
       IMPORTING
-        io_html TYPE REF TO zcl_abapgit_html
+        io_html         TYPE REF TO zcl_abapgit_html
         it_requirements TYPE zif_abapgit_dot_abapgit=>ty_requirement_tt.
     METHODS render_table_row
       IMPORTING
-        iv_name TYPE string
-        iv_value TYPE string
+        iv_name        TYPE string
+        iv_value       TYPE string
       RETURNING
         VALUE(rv_html) TYPE string.
 
@@ -111,10 +111,10 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
 
     CONSTANTS: lc_requirement_edit_count TYPE i VALUE 5.
 
-    DATA: ls_dot               TYPE zif_abapgit_dot_abapgit=>ty_dot_abapgit,
-          lv_select_html       TYPE string,
-          lv_selected          TYPE string,
-          lt_folder_logic      TYPE string_table.
+    DATA: ls_dot          TYPE zif_abapgit_dot_abapgit=>ty_dot_abapgit,
+          lv_select_html  TYPE string,
+          lv_selected     TYPE string,
+          lt_folder_logic TYPE string_table.
 
     FIELD-SYMBOLS: <lv_folder_logic> TYPE LINE OF string_table.
 
@@ -272,6 +272,13 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
 
     io_html->add( '</table>' ).
 
+    io_html->add( '<br>' ).
+    io_html->add( 'Exclude Packages: <input name="excl_packages" type="text" size="120" value="' &&
+      ls_settings-excluded_packages && '">' ).
+    io_html->add( '<br>' ).
+    io_html->add( 'Use Semicolon to separate single package names from eachother like this: ZTEST;Z_TEST;ZZ_TEST' ).
+    io_html->add( '<br>' ).
+
   ENDMETHOD.
 
 
@@ -281,12 +288,6 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
       && |<td>{ iv_name }</td>|
       && |<td>{ iv_value }</td>|
       && '</tr>'.
-    io_html->add( '<br>' ).
-    io_html->add( 'Exclude Packages: <input name="excl_packages" type="text" size="120" value="' &&
-      ls_settings-excluded_packages && '">' ).
-    io_html->add( '<br>' ).
-    io_html->add( 'Use Semicolon to separate single package names from eachother like this: ZTEST;Z_TEST;ZZ_TEST' ).
-    io_html->add( '<br>' ).
 
   ENDMETHOD.
 
