@@ -71,7 +71,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAPGIT_GUI_PAGE_REPO_SETT IMPLEMENTATION.
+CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
 
 
   METHOD constructor.
@@ -108,6 +108,8 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_REPO_SETT IMPLEMENTATION.
 
 
   METHOD render_dot_abapgit.
+
+    CONSTANTS: lc_requirement_edit_count TYPE i VALUE 5.
 
     DATA: ls_dot               TYPE zif_abapgit_dot_abapgit=>ty_dot_abapgit,
           lv_select_html       TYPE string,
@@ -279,6 +281,12 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_REPO_SETT IMPLEMENTATION.
       && |<td>{ iv_name }</td>|
       && |<td>{ iv_value }</td>|
       && '</tr>'.
+    io_html->add( '<br>' ).
+    io_html->add( 'Exclude Packages: <input name="excl_packages" type="text" size="120" value="' &&
+      ls_settings-excluded_packages && '">' ).
+    io_html->add( '<br>' ).
+    io_html->add( 'Use Semicolon to separate single package names from eachother like this: ZTEST;Z_TEST;ZZ_TEST' ).
+    io_html->add( '<br>' ).
 
   ENDMETHOD.
 
@@ -340,7 +348,6 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_REPO_SETT IMPLEMENTATION.
           ls_post_field    LIKE LINE OF it_post_fields,
           lv_check_variant TYPE sci_chkv.
 
-
     ls_settings = mo_repo->get_local_settings( ).
 
     IF mo_repo->is_offline( ) = abap_false.
@@ -376,6 +383,11 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_REPO_SETT IMPLEMENTATION.
 
     READ TABLE it_post_fields INTO ls_post_field WITH KEY name = 'serialize_master_lang_only' value = 'on'.
     ls_settings-serialize_master_lang_only = boolc( sy-subrc = 0 ).
+
+    READ TABLE it_post_fields INTO ls_post_field WITH KEY name = 'excl_packages'.
+    ASSERT sy-subrc = 0.
+    CONDENSE ls_post_field-value NO-GAPS.
+    ls_settings-excluded_packages = ls_post_field-value.
 
     mo_repo->set_local_settings( ls_settings ).
 
