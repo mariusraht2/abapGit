@@ -371,6 +371,11 @@ CLASS zcl_abapgit_repo_srv IMPLEMENTATION.
       ro_repo->set_local_settings( ls_repo-local_settings ).
     ENDIF.
 
+    IF ls_repo-local_settings-excluded_packages <> iv_excl_packages.
+      ls_repo-local_settings-excluded_packages = iv_excl_packages.
+      ro_repo->set_local_settings( ls_repo-local_settings ).
+    ENDIF.
+
     ro_repo->refresh( ).
     ro_repo->find_remote_dot_abapgit( ).
 
@@ -402,13 +407,14 @@ CLASS zcl_abapgit_repo_srv IMPLEMENTATION.
 
   METHOD zif_abapgit_repo_srv~validate_package.
 
-    DATA: lv_as4user TYPE tdevc-as4user,
-          lt_repos   TYPE zif_abapgit_persistence=>tt_repo,
-          lv_name    TYPE zif_abapgit_persistence=>ty_local_settings-display_name,
-          lv_owner   TYPE zif_abapgit_persistence=>ty_local_settings-display_name.
+    DATA: lv_as4user             TYPE tdevc-as4user,
+          lt_repos               TYPE zif_abapgit_persistence=>tt_repo,
+          lv_name                TYPE zif_abapgit_persistence=>ty_local_settings-display_name,
+          lv_owner               TYPE zif_abapgit_persistence=>ty_local_settings-display_name,
+          lo_excluded_package    TYPE REF TO zcl_abapgit_excluded_package,
+          lt_r_excluded_packages TYPE rseloption.
 
-    FIELD-SYMBOLS:
-          <ls_repo>  LIKE LINE OF lt_repos.
+    FIELD-SYMBOLS: <ls_repo>  LIKE LINE OF lt_repos.
 
     IF iv_package IS INITIAL.
       zcx_abapgit_exception=>raise( 'add, package empty' ).
@@ -435,8 +441,27 @@ CLASS zcl_abapgit_repo_srv IMPLEMENTATION.
     IF sy-subrc = 0.
       lv_name = zcl_abapgit_repo_srv=>get_instance( )->get( <ls_repo>-key )->get_name( ).
       lv_owner = <ls_repo>-created_by.
-      zcx_abapgit_exception=>raise( |Package { iv_package } already versioned as { lv_name } by { lv_owner }| ).
+      zcx_abapgit_exception=>raise( |Package { iv_package } already versioned as { lv_name } by  { lv_owner }| ).
     ENDIF.
+
+    " take filtered packages into account to make sure repo
+    " is not already in use for a different repository
+    CREATE OBJECT lo_excluded_package.
+
+    LOOP AT lt_repos ASSIGNING <ls_repo> WHERE local_settings-excluded_packages IS NOT INITIAL.
+
+      CLEAR: lt_r_excluded_packages.
+      lt_r_excluded_packages = lo_excluded_package->get_packages( <ls_repo>-local_settings-excluded_packages ).
+
+      READ TABLE lt_r_excluded_packages WITH KEY low = iv_package TRANSPORTING NO FIELDS.
+      IF sy-subrc = 0.
+        lv_name = zcl_abapgit_repo_srv=>get_instance( )->get( <ls_repo>-key )->get_name( ).
+        lv_owner = <ls_repo>-created_by.
+        zcx_abapgit_exception=>raise( |Package { iv_package } already versioned as { lv_name } by  { lv_owner }| ).
+        EXIT.
+      ENDIF.
+
+    ENDLOOP.
 
     validate_sub_super_packages(
       iv_package    = iv_package

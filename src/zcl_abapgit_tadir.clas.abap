@@ -28,6 +28,7 @@ CLASS zcl_abapgit_tadir DEFINITION
         !iv_top                TYPE tadir-devclass
         !io_dot                TYPE REF TO zcl_abapgit_dot_abapgit
         !iv_ignore_subpackages TYPE abap_bool DEFAULT abap_false
+        !iv_excluded_packages  TYPE string
         !iv_only_local_objects TYPE abap_bool
         !ii_log                TYPE REF TO zif_abapgit_log OPTIONAL
       RETURNING
@@ -38,30 +39,45 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAPGIT_TADIR IMPLEMENTATION.
+CLASS zcl_abapgit_tadir IMPLEMENTATION.
 
 
   METHOD build.
 
-    DATA: lv_path         TYPE string,
-          lo_skip_objects TYPE REF TO zcl_abapgit_skip_objects,
-          lt_excludes     TYPE RANGE OF trobjtype,
-          lt_srcsystem    TYPE RANGE OF tadir-srcsystem,
-          ls_srcsystem    LIKE LINE OF lt_srcsystem,
-          ls_exclude      LIKE LINE OF lt_excludes,
-          lo_folder_logic TYPE REF TO zcl_abapgit_folder_logic,
-          lv_last_package TYPE devclass VALUE cl_abap_char_utilities=>horizontal_tab,
-          lt_packages     TYPE zif_abapgit_sap_package=>ty_devclass_tt.
+    DATA: lv_path                TYPE string,
+          lo_skip_objects        TYPE REF TO zcl_abapgit_skip_objects,
+          lt_excludes            TYPE RANGE OF trobjtype,
+          lt_srcsystem           TYPE RANGE OF tadir-srcsystem,
+          ls_srcsystem           LIKE LINE OF lt_srcsystem,
+          ls_exclude             LIKE LINE OF lt_excludes,
+          lo_folder_logic        TYPE REF TO zcl_abapgit_folder_logic,
+          lv_last_package        TYPE devclass VALUE cl_abap_char_utilities=>horizontal_tab,
+          lt_packages            TYPE zif_abapgit_sap_package=>ty_devclass_tt,
+          lo_excluded_package    TYPE REF TO zcl_abapgit_excluded_package,
+          lt_r_excluded_packages TYPE rseloption.
 
     FIELD-SYMBOLS: <ls_tadir>   LIKE LINE OF rt_tadir,
                    <lv_package> LIKE LINE OF lt_packages.
-
 
     "Determine Packages to Read
     IF iv_ignore_subpackages = abap_false.
       lt_packages = zcl_abapgit_factory=>get_sap_package( iv_package )->list_subpackages( ).
     ENDIF.
     INSERT iv_package INTO lt_packages INDEX 1.
+
+    "Determine Packages to Filter
+    IF iv_excluded_packages CN ' _0'.
+
+      CREATE OBJECT lo_excluded_package.
+      lt_r_excluded_packages = lo_excluded_package->get_packages( iv_excluded_packages ).
+
+      IF lt_r_excluded_packages IS NOT INITIAL.
+
+        DELETE lt_packages WHERE table_line IN lt_r_excluded_packages.
+
+      ENDIF.
+
+    ENDIF.
 
     ls_exclude-sign = 'I'.
     ls_exclude-option = 'EQ'.
@@ -233,6 +249,7 @@ CLASS ZCL_ABAPGIT_TADIR IMPLEMENTATION.
                       iv_top                = iv_package
                       io_dot                = io_dot
                       iv_ignore_subpackages = iv_ignore_subpackages
+                      iv_excluded_packages  = iv_excluded_packages
                       iv_only_local_objects = iv_only_local_objects
                       ii_log                = ii_log ).
 
