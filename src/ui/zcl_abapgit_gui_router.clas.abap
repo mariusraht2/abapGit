@@ -126,7 +126,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAPGIT_GUI_ROUTER IMPLEMENTATION.
+CLASS zcl_abapgit_gui_router IMPLEMENTATION.
 
 
   METHOD abapgit_services_actions.
@@ -203,9 +203,6 @@ CLASS ZCL_ABAPGIT_GUI_ROUTER IMPLEMENTATION.
         " General PAGE routing
       WHEN zcl_abapgit_gui=>c_action-go_home.                          " Go Main page
         CREATE OBJECT ei_page TYPE zcl_abapgit_gui_page_main.
-        ev_state = zcl_abapgit_gui=>c_event_state-new_page.
-      WHEN zif_abapgit_definitions=>c_action-go_explore.                     " Go Explore page
-        CREATE OBJECT ei_page TYPE zcl_abapgit_gui_page_explore.
         ev_state = zcl_abapgit_gui=>c_event_state-new_page.
       WHEN zif_abapgit_definitions=>c_action-go_repo_overview.               " Go Repository overview
         CREATE OBJECT ei_page TYPE zcl_abapgit_gui_page_repo_over.
@@ -489,9 +486,6 @@ CLASS ZCL_ABAPGIT_GUI_ROUTER IMPLEMENTATION.
         zcl_abapgit_services_repo=>remove( lv_key ).
         ev_state = zcl_abapgit_gui=>c_event_state-re_render.
       WHEN zif_abapgit_definitions=>c_action-repo_newonline.
-        zcl_abapgit_services_repo=>new_online( lv_url ).
-        ev_state = zcl_abapgit_gui=>c_event_state-re_render.
-      WHEN 'install'.    " 'install' is for explore page
         zcl_abapgit_services_repo=>new_online( lv_url ).
         ev_state = zcl_abapgit_gui=>c_event_state-re_render.
       WHEN zif_abapgit_definitions=>c_action-repo_refresh_checksums.          " Rebuild local checksums
