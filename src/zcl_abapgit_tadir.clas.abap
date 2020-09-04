@@ -28,7 +28,7 @@ CLASS zcl_abapgit_tadir DEFINITION
         !iv_top                TYPE tadir-devclass
         !io_dot                TYPE REF TO zcl_abapgit_dot_abapgit
         !iv_ignore_subpackages TYPE abap_bool DEFAULT abap_false
-        !iv_excluded_packages  TYPE string
+        !it_excluded_packages  TYPE string_table
         !iv_only_local_objects TYPE abap_bool
         !ii_log                TYPE REF TO zif_abapgit_log OPTIONAL
       RETURNING
@@ -66,10 +66,10 @@ CLASS zcl_abapgit_tadir IMPLEMENTATION.
     INSERT iv_package INTO lt_packages INDEX 1.
 
     "Determine Packages to Filter
-    IF iv_excluded_packages CN ' _0'.
+    IF it_excluded_packages IS NOT INITIAL.
 
       CREATE OBJECT lo_excluded_package.
-      lt_r_excluded_packages = lo_excluded_package->get_packages( iv_excluded_packages ).
+      lt_r_excluded_packages = lo_excluded_package->get_packages( it_excluded_packages ).
 
       IF lt_r_excluded_packages IS NOT INITIAL.
 
@@ -249,7 +249,7 @@ CLASS zcl_abapgit_tadir IMPLEMENTATION.
                       iv_top                = iv_package
                       io_dot                = io_dot
                       iv_ignore_subpackages = iv_ignore_subpackages
-                      iv_excluded_packages  = iv_excluded_packages
+                      it_excluded_packages  = it_excluded_packages
                       iv_only_local_objects = iv_only_local_objects
                       ii_log                = ii_log ).
 

@@ -68,7 +68,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAPGIT_REPO_SRV IMPLEMENTATION.
+CLASS zcl_abapgit_repo_srv IMPLEMENTATION.
 
 
   METHOD add.
@@ -398,7 +398,7 @@ CLASS ZCL_ABAPGIT_REPO_SRV IMPLEMENTATION.
 
 
     ASSERT NOT iv_url IS INITIAL
-      AND NOT iv_package IS INITIAL.
+       AND NOT iv_package IS INITIAL.
 
     lv_branch_name = iv_branch_name.
     IF lv_branch_name IS INITIAL.
@@ -441,13 +441,14 @@ CLASS ZCL_ABAPGIT_REPO_SRV IMPLEMENTATION.
     IF ls_repo-local_settings-ignore_subpackages <> iv_ign_subpkg.
       ls_repo-local_settings-ignore_subpackages = iv_ign_subpkg.
     ENDIF.
-    ls_repo-local_settings-serialize_master_lang_only = iv_master_lang_only.
-    ro_repo->set_local_settings( ls_repo-local_settings ).
 
-    IF ls_repo-local_settings-excluded_packages <> iv_excl_packages.
-      ls_repo-local_settings-excluded_packages = iv_excl_packages.
-      ro_repo->set_local_settings( ls_repo-local_settings ).
+    ls_repo-local_settings-serialize_master_lang_only = iv_master_lang_only.
+
+    IF ls_repo-local_settings-excluded_packages <> it_excl_packages.
+      ls_repo-local_settings-excluded_packages = it_excl_packages.
     ENDIF.
+
+    ro_repo->set_local_settings( ls_repo-local_settings ).
 
     ro_repo->refresh( ).
     ro_repo->find_remote_dot_abapgit( ).

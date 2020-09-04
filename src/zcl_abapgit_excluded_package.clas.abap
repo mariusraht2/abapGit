@@ -5,22 +5,16 @@ CLASS zcl_abapgit_excluded_package DEFINITION
 
   PUBLIC SECTION.
 
-    TYPES ty_excluded_packages TYPE string .
-    TYPES ty_t_excluded_packages TYPE string_table .
+    TYPES ty_excluded_packages TYPE string_table .
 
     CONSTANTS:
       c_separator TYPE c LENGTH 1 VALUE ';' ##NO_TEXT.
 
     METHODS get_packages
       IMPORTING
-        !iv_excluded_packages TYPE ty_excluded_packages
+        !it_excluded_packages TYPE ty_excluded_packages
       RETURNING
         VALUE(rt_r_packages)  TYPE rseloption .
-    METHODS to_table
-      IMPORTING
-        !iv_excluded_packages TYPE ty_excluded_packages
-      RETURNING
-        VALUE(rt_packages)    TYPE ty_t_excluded_packages .
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -32,13 +26,14 @@ CLASS zcl_abapgit_excluded_package IMPLEMENTATION.
 
   METHOD get_packages.
 
-    DATA: lt_packages   TYPE ty_t_excluded_packages,
+    DATA: lt_packages   TYPE ty_excluded_packages,
           ls_r_packages TYPE rsdsselopt,
           lt_r_packages TYPE rseloption.
 
-    FIELD-SYMBOLS: <lv_packages> TYPE ty_excluded_packages.
+    FIELD-SYMBOLS: <lv_packages> LIKE LINE OF lt_packages.
 
-    lt_packages = to_table( iv_excluded_packages ).
+
+    lt_packages = it_excluded_packages.
 
     WHILE lt_packages IS NOT INITIAL.
 
@@ -69,15 +64,4 @@ CLASS zcl_abapgit_excluded_package IMPLEMENTATION.
 
   ENDMETHOD.
 
-
-  METHOD to_table.
-
-    SPLIT iv_excluded_packages
-      AT zcl_abapgit_excluded_package=>c_separator
-      INTO TABLE rt_packages.
-
-    SORT rt_packages.
-    DELETE ADJACENT DUPLICATES FROM rt_packages.
-
-  ENDMETHOD.
 ENDCLASS.

@@ -315,7 +315,10 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
 
   METHOD render_remotes.
 
-    DATA lo_repo_online TYPE REF TO zcl_abapgit_repo_online.
+    DATA: lo_repo_online TYPE REF TO zcl_abapgit_repo_online,
+          lv_exclude     TYPE string.
+
+    FIELD-SYMBOLS: <lv_exclude> TYPE string.
 
     lo_repo_online ?= mo_repo.
 
@@ -327,19 +330,23 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
       iv_name  = 'Current remote'
       iv_value = |{ lo_repo_online->get_url( )
       } <span class="grey">@{ lo_repo_online->get_branch_name( ) }</span>| ) ).
+
     ii_html->add( render_table_row(
       iv_name  = 'Switched origin'
       iv_value = |<input name="switched_origin" type="text" size="60" value="{
         lo_repo_online->get_switched_origin( ) }">| ) ).
 
-    ii_html->add( '</table>' ).
+    LOOP AT lo_repo_online->get_local_settings( )-excluded_packages ASSIGNING <lv_exclude>.
+      lv_exclude = |{ lv_exclude }{ <lv_exclude> }{ zif_abapgit_definitions=>c_newline }|.
+    ENDLOOP.
 
-    io_html->add( '<br>' ).
-    io_html->add( 'Exclude Packages: <input name="excl_packages" type="text" size="120" value="' &&
-      ls_settings-excluded_packages && '">' ).
-    io_html->add( '<br>' ).
-    io_html->add( 'Use Semicolon to separate single package names from eachother like this: ZTEST;Z_TEST;ZZ_TEST' ).
-    io_html->add( '<br>' ).
+    ii_html->add( render_table_row(
+      iv_name  = 'Exclude Packages'
+      iv_value = |<textarea name="exclude_packages" rows="{
+                   lines( lo_repo_online->get_local_settings( )-excluded_packages )
+                   }" cols="50">{ lv_exclude }</textarea>| ) ).
+
+    ii_html->add( '</table>' ).
 
   ENDMETHOD.
 
@@ -347,7 +354,7 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
   METHOD render_table_row.
 
     rv_html = '<tr>'
-      && |<td>{ iv_name }</td>|
+      && |<td style="vertical-align:top">{ iv_name }</td>|
       && |<td>{ iv_value }</td>|
       && '</tr>'.
 
@@ -435,7 +442,9 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
 
     DATA: ls_settings      TYPE zif_abapgit_persistence=>ty_repo-local_settings,
           ls_post_field    LIKE LINE OF it_post_fields,
-          lv_check_variant TYPE sci_chkv.
+          lv_check_variant TYPE sci_chkv,
+          lv_exclude       TYPE string,
+          lt_exclude       TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
 
     ls_settings = mo_repo->get_local_settings( ).
 
@@ -471,10 +480,17 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
     READ TABLE it_post_fields INTO ls_post_field WITH KEY name = 'serialize_master_lang_only' value = 'on'.
     ls_settings-serialize_master_lang_only = boolc( sy-subrc = 0 ).
 
-    READ TABLE it_post_fields INTO ls_post_field WITH KEY name = 'excl_packages'.
+    READ TABLE it_post_fields INTO ls_post_field WITH KEY name = 'exclude_packages'.
     ASSERT sy-subrc = 0.
-    CONDENSE ls_post_field-value NO-GAPS.
-    ls_settings-excluded_packages = ls_post_field-value.
+
+    CLEAR: lt_exclude, ls_settings-excluded_packages.
+    REPLACE ALL OCCURRENCES OF zif_abapgit_definitions=>c_crlf IN ls_post_field-value
+      WITH zif_abapgit_definitions=>c_newline.
+    SPLIT ls_post_field-value AT zif_abapgit_definitions=>c_newline INTO TABLE lt_exclude.
+    DELETE lt_exclude WHERE table_line IS INITIAL.
+    LOOP AT lt_exclude INTO lv_exclude.
+      APPEND lv_exclude TO ls_settings-excluded_packages.
+    ENDLOOP.
 
     mo_repo->set_local_settings( ls_settings ).
 

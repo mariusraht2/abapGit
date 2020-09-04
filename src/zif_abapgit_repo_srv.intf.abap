@@ -45,7 +45,7 @@ INTERFACE zif_abapgit_repo_srv
       !iv_folder_logic     TYPE string DEFAULT 'PREFIX'
       !iv_ign_subpkg       TYPE abap_bool DEFAULT abap_false
       !iv_master_lang_only TYPE abap_bool DEFAULT abap_false
-      !iv_excl_packages    TYPE string OPTIONAL
+      !it_excl_packages    TYPE string_table OPTIONAL
     RETURNING
       VALUE(ro_repo)       TYPE REF TO zcl_abapgit_repo_online
     RAISING

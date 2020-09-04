@@ -15,7 +15,7 @@ INTERFACE zif_abapgit_tadir
     IMPORTING
       !iv_package            TYPE tadir-devclass
       !iv_ignore_subpackages TYPE abap_bool DEFAULT abap_false
-      !iv_excluded_packages  TYPE string OPTIONAL
+      !it_excluded_packages  TYPE string_table OPTIONAL
       !iv_only_local_objects TYPE abap_bool DEFAULT abap_false
       !io_dot                TYPE REF TO zcl_abapgit_dot_abapgit OPTIONAL
       !ii_log                TYPE REF TO zif_abapgit_log OPTIONAL
