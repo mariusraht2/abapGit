@@ -205,7 +205,7 @@ CLASS zcl_abapgit_services_repo IMPLEMENTATION.
       iv_folder_logic     = is_repo_params-folder_logic
       iv_ign_subpkg       = is_repo_params-ignore_subpackages
       iv_master_lang_only = is_repo_params-master_lang_only
-      iv_excl_packages    = ls_popup-excl_pkg ).
+      iv_excl_packages    = is_repo_params-excl_pkg ).
 
     toggle_favorite( ro_repo->get_key( ) ).
 

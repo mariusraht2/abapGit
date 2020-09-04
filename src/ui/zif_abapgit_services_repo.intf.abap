@@ -3,13 +3,14 @@ INTERFACE zif_abapgit_services_repo
 
   TYPES:
     BEGIN OF ty_repo_params,
-      url              TYPE string,
-      package          TYPE devclass,
-      branch_name      TYPE string,
-      display_name     TYPE string,
-      folder_logic     TYPE string,
+      url                TYPE string,
+      package            TYPE devclass,
+      branch_name        TYPE string,
+      display_name       TYPE string,
+      folder_logic       TYPE string,
       ignore_subpackages TYPE abap_bool,
-      master_lang_only TYPE abap_bool,
+      master_lang_only   TYPE abap_bool,
+      excl_pkg           TYPE string,
     END OF ty_repo_params .
 
 ENDINTERFACE.
