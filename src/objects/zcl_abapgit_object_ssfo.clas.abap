@@ -43,8 +43,8 @@ CLASS ZCL_ABAPGIT_OBJECT_SSFO IMPLEMENTATION.
 
 
   METHOD code_item_section_handling.
-    CONSTANTS: lc_node_item TYPE string VALUE 'item' ##NO_TEXT.
-    CONSTANTS: lc_node_text TYPE string VALUE '#text' ##NO_TEXT.
+    CONSTANTS: lc_node_item TYPE string VALUE 'item'.
+    CONSTANTS: lc_node_text TYPE string VALUE '#text'.
 
     IF iv_name IN get_range_node_codes( ).
       cv_within_code_section = abap_true.
@@ -410,8 +410,7 @@ CLASS ZCL_ABAPGIT_OBJECT_SSFO IMPLEMENTATION.
           li_iterator            TYPE REF TO if_ixml_node_iterator,
           lv_formname            TYPE tdsfname,
           li_ixml                TYPE REF TO if_ixml,
-          li_xml_doc             TYPE REF TO if_ixml_document,
-          lv_within_code_section TYPE abap_bool.
+          li_xml_doc             TYPE REF TO if_ixml_document.
 
     li_ixml = cl_ixml=>create( ).
     li_xml_doc = li_ixml->create_document( ).
@@ -452,10 +451,10 @@ CLASS ZCL_ABAPGIT_OBJECT_SSFO IMPLEMENTATION.
     li_element->set_attribute(
       name      = 'sf'
       namespace = 'xmlns'
-      value     = 'urn:sap-com:SmartForms:2000:internal-structure' ). "#EC NOTEXT
+      value     = 'urn:sap-com:SmartForms:2000:internal-structure' ).
     li_element->set_attribute(
       name  = 'xmlns'
-      value = 'urn:sap-com:sdixml-ifr:2000' ).              "#EC NOTEXT
+      value = 'urn:sap-com:sdixml-ifr:2000' ).
 
     io_xml->set_raw( li_xml_doc->get_root_element( ) ).
 

@@ -187,7 +187,7 @@ CLASS ZCL_ABAPGIT_OBJECT_DDLS IMPLEMENTATION.
 
         ASSIGN COMPONENT 'SOURCE' OF STRUCTURE <lg_data> TO <lg_source>.
         ASSERT sy-subrc = 0.
-        <lg_source> = mo_files->read_string( 'asddls' ) ##no_text.
+        <lg_source> = mo_files->read_string( 'asddls' ).
 
         CALL METHOD ('CL_DD_DDL_HANDLER_FACTORY')=>('CREATE')
           RECEIVING
@@ -229,6 +229,11 @@ CLASS ZCL_ABAPGIT_OBJECT_DDLS IMPLEMENTATION.
         corr_insert( iv_package ).
 
       CATCH cx_root INTO lx_error.
+        CALL METHOD lo_ddl->('IF_DD_DDL_HANDLER~DELETE')
+          EXPORTING
+            name = ms_item-obj_name
+            prid = 0.
+
         zcx_abapgit_exception=>raise( iv_text     = lx_error->get_text( )
                                       ix_previous = lx_error ).
     ENDTRY.
@@ -370,7 +375,7 @@ CLASS ZCL_ABAPGIT_OBJECT_DDLS IMPLEMENTATION.
               ASSIGN COMPONENT 'BASEINFO_STRING' OF STRUCTURE <lg_data_baseinfo> TO <lg_field>.
               ASSERT sy-subrc = 0.
               mo_files->add_string( iv_ext    = 'baseinfo'
-                                    iv_string = <lg_field> ) ##no_text.
+                                    iv_string = <lg_field> ).
               EXIT.
             ENDIF.
           ENDLOOP.
@@ -406,7 +411,7 @@ CLASS ZCL_ABAPGIT_OBJECT_DDLS IMPLEMENTATION.
     ASSERT sy-subrc = 0.
 
     mo_files->add_string( iv_ext    = 'asddls'
-                          iv_string = <lg_field> ) ##no_text.
+                          iv_string = <lg_field> ).
 
     CLEAR <lg_field>.
 
@@ -419,7 +424,7 @@ CLASS ZCL_ABAPGIT_OBJECT_DDLS IMPLEMENTATION.
   METHOD read_baseinfo.
 
     TRY.
-        rv_baseinfo_string = mo_files->read_string( 'baseinfo' ) ##no_text.
+        rv_baseinfo_string = mo_files->read_string( 'baseinfo' ).
 
       CATCH zcx_abapgit_exception.
         " File not found. That's ok, as the object could have been created in a

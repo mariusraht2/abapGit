@@ -37,6 +37,8 @@ CLASS zcl_abapgit_object_fugr DEFINITION PUBLIC INHERITING FROM zcl_abapgit_obje
     TYPES:
       tt_tpool_i18n TYPE STANDARD TABLE OF ty_tpool_i18n .
 
+    DATA mt_includes_cache TYPE ty_sobj_name_tt .
+
     METHODS check_rfc_parameters
       IMPORTING
         !is_function TYPE ty_function
@@ -92,13 +94,6 @@ CLASS zcl_abapgit_object_fugr DEFINITION PUBLIC INHERITING FROM zcl_abapgit_obje
         !ii_log     TYPE REF TO zif_abapgit_log
       RAISING
         zcx_abapgit_exception .
-    METHODS are_exceptions_class_based
-      IMPORTING
-        !iv_function_name TYPE rs38l_fnam
-      RETURNING
-        VALUE(rv_return)  TYPE abap_bool
-      RAISING
-        zcx_abapgit_exception .
     METHODS is_function_group_locked
       RETURNING
         VALUE(rv_is_functions_group_locked) TYPE abap_bool
@@ -128,13 +123,13 @@ CLASS zcl_abapgit_object_fugr DEFINITION PUBLIC INHERITING FROM zcl_abapgit_obje
     METHODS serialize_texts
       IMPORTING
         !iv_prog_name TYPE programm
-        !io_xml       TYPE REF TO zcl_abapgit_xml_output
+        !io_xml       TYPE REF TO zif_abapgit_xml_output
       RAISING
         zcx_abapgit_exception .
     METHODS deserialize_texts
       IMPORTING
         !iv_prog_name TYPE programm
-        !io_xml       TYPE REF TO zcl_abapgit_xml_input
+        !io_xml       TYPE REF TO zif_abapgit_xml_input
       RAISING
         zcx_abapgit_exception .
 ENDCLASS.
@@ -142,36 +137,6 @@ ENDCLASS.
 
 
 CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
-
-
-  METHOD are_exceptions_class_based.
-    DATA:
-      lt_dokumentation    TYPE TABLE OF funct,
-      lt_exception_list   TYPE TABLE OF rsexc,
-      lt_export_parameter TYPE TABLE OF rsexp,
-      lt_import_parameter TYPE TABLE OF rsimp,
-      lt_tables_parameter TYPE TABLE OF rstbl.
-
-    CALL FUNCTION 'FUNCTION_IMPORT_DOKU'
-      EXPORTING
-        funcname           = iv_function_name
-      IMPORTING
-        exception_class    = rv_return
-      TABLES
-        dokumentation      = lt_dokumentation
-        exception_list     = lt_exception_list
-        export_parameter   = lt_export_parameter
-        import_parameter   = lt_import_parameter
-        tables_parameter   = lt_tables_parameter
-      EXCEPTIONS
-        error_message      = 1
-        function_not_found = 2
-        invalid_name       = 3
-        OTHERS             = 4.
-    IF sy-subrc <> 0.
-      zcx_abapgit_exception=>raise( 'Error from FUNCTION_IMPORT_DOKU' ).
-    ENDIF.
-  ENDMETHOD.
 
 
   METHOD check_rfc_parameters.
@@ -253,7 +218,8 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
 
       IF sy-subrc <> 0.
         MESSAGE ID sy-msgid TYPE 'S' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 INTO lv_msg.
-        ii_log->add_error( iv_msg  = |Function module { <ls_func>-funcname }: { lv_msg }| is_item = ms_item ).
+        ii_log->add_error( iv_msg  = |Function module { <ls_func>-funcname }: { lv_msg }|
+                           is_item = ms_item ).
         CONTINUE. "with next function module
       ENDIF.
 
@@ -276,7 +242,8 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
             OTHERS                   = 2.
         IF sy-subrc <> 0.
           MESSAGE ID sy-msgid TYPE 'S' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 INTO lv_msg.
-          ii_log->add_error( iv_msg = |Function module { <ls_func>-funcname }: { lv_msg }| is_item = ms_item ).
+          ii_log->add_error( iv_msg = |Function module { <ls_func>-funcname }: { lv_msg }|
+                             is_item = ms_item ).
           CONTINUE. "with next function module
         ENDIF.
       ENDIF.
@@ -325,12 +292,14 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
           OTHERS                  = 11.
       IF sy-subrc <> 0.
         MESSAGE ID sy-msgid TYPE 'S' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 INTO lv_msg.
-        ii_log->add_error( iv_msg = |Function module { <ls_func>-funcname }: { lv_msg }| is_item = ms_item ).
+        ii_log->add_error( iv_msg = |Function module { <ls_func>-funcname }: { lv_msg }|
+                           is_item = ms_item ).
         CONTINUE.  "with next function module
       ENDIF.
 
       INSERT REPORT lv_include FROM lt_source.
-      ii_log->add_success( iv_msg = |Function module { <ls_func>-funcname } imported| is_item = ms_item ).
+      ii_log->add_success( iv_msg = |Function module { <ls_func>-funcname } imported|
+                           is_item = ms_item ).
     ENDLOOP.
 
   ENDMETHOD.
@@ -358,7 +327,8 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
 
       "ignore simple transformation includes (as long as they remain in existing repositories)
       IF strlen( <lv_include> ) = 33 AND <lv_include>+30(3) = 'XTI'.
-        ii_log->add_warning( iv_msg = |Simple Transformation include { <lv_include> } ignored| is_item = ms_item ).
+        ii_log->add_warning( iv_msg = |Simple Transformation include { <lv_include> } ignored|
+                             is_item = ms_item ).
         CONTINUE.
       ENDIF.
 
@@ -383,10 +353,12 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
                                 it_tpool      = lt_tpool
                                 iv_is_include = abap_true ).
 
-          ii_log->add_success( iv_msg = |Include { ls_progdir-name } imported| is_item = ms_item ).
+          ii_log->add_success( iv_msg = |Include { ls_progdir-name } imported|
+                               is_item = ms_item ).
 
         CATCH zcx_abapgit_exception INTO lx_exc.
-          ii_log->add_exception( ix_exc = lx_exc is_item = ms_item ).
+          ii_log->add_exception( ix_exc = lx_exc
+                                 is_item = ms_item ).
           CONTINUE.
       ENDTRY.
 
@@ -493,9 +465,10 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
   METHOD functions.
 
     DATA: lv_area TYPE rs38l-area.
-
+    FIELD-SYMBOLS: <ls_functab> TYPE LINE OF ty_rs38l_incl_tt.
 
     lv_area = ms_item-obj_name.
+
 
     CALL FUNCTION 'RS_FUNCTION_POOL_CONTENTS'
       EXPORTING
@@ -506,8 +479,13 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
         function_pool_not_found = 1
         OTHERS                  = 2.
     IF sy-subrc <> 0.
-      zcx_abapgit_exception=>raise( 'Error from RS_FUNCTION_POOL_CONTENTS' ).
+      zcx_abapgit_exception=>raise( |Error from RS_FUNCTION_POOL_CONTENTS for { lv_area }| ).
     ENDIF.
+
+* The result can also contain function which are lowercase.
+    LOOP AT rt_functab ASSIGNING <ls_functab>.
+      TRANSLATE <ls_functab> TO UPPER CASE.
+    ENDLOOP.
 
     SORT rt_functab BY funcname ASCENDING.
     DELETE ADJACENT DUPLICATES FROM rt_functab COMPARING funcname.
@@ -555,7 +533,6 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
 
     TYPES: BEGIN OF ty_reposrc,
              progname TYPE reposrc-progname,
-             cnam     TYPE reposrc-cnam,
            END OF ty_reposrc.
 
     DATA: lt_reposrc        TYPE STANDARD TABLE OF ty_reposrc WITH DEFAULT KEY,
@@ -570,6 +547,11 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
     FIELD-SYMBOLS: <lv_include> LIKE LINE OF rt_includes,
                    <ls_func>    LIKE LINE OF lt_functab.
 
+
+    IF lines( mt_includes_cache ) > 0.
+      rt_includes = mt_includes_cache.
+      RETURN.
+    ENDIF.
 
     lv_program = main_name( ).
     lt_functab = functions( ).
@@ -599,7 +581,8 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
       lv_maintviewname = |L{ ms_item-obj_name }T00|.
     ELSE.
       "FGroup name contains a namespace
-      lv_offset_ns = find( val = ms_item-obj_name+1 sub = '/' ).
+      lv_offset_ns = find( val = ms_item-obj_name+1
+                           sub = '/' ).
       lv_offset_ns = lv_offset_ns + 2.
       lv_maintviewname = |{ ms_item-obj_name(lv_offset_ns) }L{ ms_item-obj_name+lv_offset_ns }T00|.
     ENDIF.
@@ -640,11 +623,13 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
         ENDIF.
       ENDLOOP.
 
-      SELECT progname cnam FROM reposrc
-        INTO TABLE lt_reposrc
-        FOR ALL ENTRIES IN rt_includes
-        WHERE progname = rt_includes-table_line
-        AND r3state = 'A'.
+      IF lines( rt_includes ) > 0.
+        SELECT progname FROM reposrc
+          INTO TABLE lt_reposrc
+          FOR ALL ENTRIES IN rt_includes
+          WHERE progname = rt_includes-table_line
+          AND r3state = 'A'.
+      ENDIF.
       SORT lt_reposrc BY progname ASCENDING.
     ENDIF.
 
@@ -661,6 +646,8 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
     ENDLOOP.
 
     APPEND lv_program TO rt_includes.
+
+    mt_includes_cache = rt_includes.
 
   ENDMETHOD.
 
@@ -821,7 +808,8 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
         CLEAR <ls_documentation>-index.
       ENDLOOP.
 
-      ls_function-exception_classes = are_exceptions_class_based( <ls_func>-funcname ).
+      SELECT SINGLE exten3 INTO ls_function-exception_classes FROM enlfdir
+        WHERE funcname = <ls_func>-funcname.              "#EC CI_SUBRC
 
       APPEND ls_function TO rt_functions.
 
@@ -878,7 +866,7 @@ CLASS ZCL_ABAPGIT_OBJECT_FUGR IMPLEMENTATION.
       FROM d010tinf
       WHERE r3state = 'A'
       AND prog = iv_prog_name
-      AND language <> mv_language.
+      AND language <> mv_language ##TOO_MANY_ITAB_FIELDS.
 
     SORT lt_tpool_i18n BY language ASCENDING.
     LOOP AT lt_tpool_i18n ASSIGNING <ls_tpool>.

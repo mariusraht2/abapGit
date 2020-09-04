@@ -32,7 +32,7 @@ CLASS zcl_abapgit_ecatt_helper DEFINITION
   PROTECTED SECTION.
   PRIVATE SECTION.
     CONSTANTS:
-      co_xml TYPE int4 VALUE 1. " downport of if_apl_ecatt_xml=>co_xml
+      co_xml TYPE i VALUE 1. " downport of if_apl_ecatt_xml=>co_xml
 
 ENDCLASS.
 
@@ -127,7 +127,7 @@ CLASS zcl_abapgit_ecatt_helper IMPLEMENTATION.
     lo_xml->get_attributes( IMPORTING ex_dom = ri_template_over_all ).
 
 * MD: Workaround, because nodes starting with "XML" are not allowed
-    li_nc_xmlref_typ ?= ri_template_over_all->get_elements_by_tag_name_ns( 'XMLREF_TYP' ). "#EC NOTEXT
+    li_nc_xmlref_typ ?= ri_template_over_all->get_elements_by_tag_name_ns( 'XMLREF_TYP' ).
     CALL METHOD li_nc_xmlref_typ->('GET_LENGTH')  " downport
       RECEIVING
         rval = lv_count.

@@ -165,6 +165,7 @@ CLASS zcl_abapgit_repo DEFINITION
         !is_local_settings  TYPE zif_abapgit_persistence=>ty_repo-local_settings OPTIONAL
         !iv_deserialized_at TYPE zif_abapgit_persistence=>ty_repo-deserialized_at OPTIONAL
         !iv_deserialized_by TYPE zif_abapgit_persistence=>ty_repo-deserialized_by OPTIONAL
+        !iv_switched_origin TYPE zif_abapgit_persistence=>ty_repo-switched_origin OPTIONAL
       RAISING
         zcx_abapgit_exception .
     METHODS reset_remote .
@@ -194,6 +195,7 @@ CLASS zcl_abapgit_repo DEFINITION
     METHODS update_last_deserialize
       RAISING
         zcx_abapgit_exception .
+    METHODS check_for_restart .
 ENDCLASS.
 
 
@@ -231,6 +233,26 @@ CLASS ZCL_ABAPGIT_REPO IMPLEMENTATION.
     rs_file-data     = get_dot_abapgit( )->serialize( ).
     rs_file-sha1     = zcl_abapgit_hash=>sha1( iv_type = zif_abapgit_definitions=>c_type-blob
                                                iv_data = rs_file-data ).
+
+  ENDMETHOD.
+
+
+  METHOD check_for_restart.
+
+    CONSTANTS:
+      lc_abapgit_prog TYPE progname VALUE `ZABAPGIT`.
+
+    " If abapGit was used to update itself, then restart to avoid LOAD_PROGRAM_&_MISMATCH dumps
+    " because abapGit code was changed at runtime
+    IF zcl_abapgit_ui_factory=>get_gui_functions( )->gui_is_available( ) = abap_true AND
+       zcl_abapgit_url=>is_abapgit_repo( ms_data-url ) = abap_true AND
+       sy-batch = abap_false AND
+       sy-cprog = lc_abapgit_prog.
+
+      MESSAGE 'abapGit was updated and will restart itself' TYPE 'I'.
+      SUBMIT (sy-cprog).
+
+    ENDIF.
 
   ENDMETHOD.
 
@@ -305,6 +327,8 @@ CLASS ZCL_ABAPGIT_REPO IMPLEMENTATION.
 
     COMMIT WORK AND WAIT.
 
+    check_for_restart( ).
+
   ENDMETHOD.
 
 
@@ -356,6 +380,9 @@ CLASS ZCL_ABAPGIT_REPO IMPLEMENTATION.
       ro_dot = zcl_abapgit_dot_abapgit=>deserialize( <ls_remote>-data ).
       set_dot_abapgit( ro_dot ).
       COMMIT WORK AND WAIT. " to release lock
+    ELSEIF lines( mt_remote ) > 3.
+      " Less files means it's a new repo (with just readme and license, for example) which is ok
+      zcx_abapgit_exception=>raise( |Cannot find .abapgit.xml - Is this an abapGit repo?| ).
     ENDIF.
 
   ENDMETHOD.
@@ -480,7 +507,12 @@ CLASS ZCL_ABAPGIT_REPO IMPLEMENTATION.
     FIELD-SYMBOLS <ls_object> LIKE LINE OF ms_data-local_checksums.
 
     LOOP AT ms_data-local_checksums ASSIGNING <ls_object>.
-      APPEND LINES OF <ls_object>-files TO rt_checksums.
+      " Check if item exists
+      READ TABLE mt_local TRANSPORTING NO FIELDS
+        WITH KEY item = <ls_object>-item.
+      IF sy-subrc = 0.
+        APPEND LINES OF <ls_object>-files TO rt_checksums.
+      ENDIF.
     ENDLOOP.
 
   ENDMETHOD.
@@ -643,7 +675,7 @@ CLASS ZCL_ABAPGIT_REPO IMPLEMENTATION.
 
   METHOD set.
 
-* TODO: refactor
+* TODO: refactor, maybe use zcl_abapgit_string_map ?
 
     DATA: ls_mask TYPE zif_abapgit_persistence=>ty_repo_meta_mask.
 
@@ -656,7 +688,8 @@ CLASS ZCL_ABAPGIT_REPO IMPLEMENTATION.
       OR is_dot_abapgit IS SUPPLIED
       OR is_local_settings IS SUPPLIED
       OR iv_deserialized_by IS SUPPLIED
-      OR iv_deserialized_at IS SUPPLIED.
+      OR iv_deserialized_at IS SUPPLIED
+      OR iv_switched_origin IS SUPPLIED.
 
 
     IF it_checksums IS SUPPLIED.
@@ -699,6 +732,11 @@ CLASS ZCL_ABAPGIT_REPO IMPLEMENTATION.
       ms_data-deserialized_by = iv_deserialized_by.
       ls_mask-deserialized_at = abap_true.
       ls_mask-deserialized_by = abap_true.
+    ENDIF.
+
+    IF iv_switched_origin IS SUPPLIED.
+      ms_data-switched_origin = iv_switched_origin.
+      ls_mask-switched_origin = abap_true.
     ENDIF.
 
     notify_listener( ls_mask ).

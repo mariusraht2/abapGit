@@ -3,19 +3,27 @@ INTERFACE zif_abapgit_popups
 
 
   TYPES:
-    BEGIN OF ty_popup,
-      url          TYPE string,
-      package      TYPE devclass,
-      branch_name  TYPE string,
-      display_name TYPE string,
-      folder_logic TYPE string,
-      ign_subpkg   TYPE abap_bool,
-      excl_pkg     TYPE string,
-      cancel       TYPE abap_bool,
+    BEGIN OF ty_popup, " TODO remove, use zif_abapgit_services_repo=>ty_repo_params instead
+      url              TYPE string,
+      package          TYPE devclass,
+      branch_name      TYPE string,
+      display_name     TYPE string,
+      folder_logic     TYPE string,
+      ign_subpkg       TYPE abap_bool,
+      master_lang_only TYPE abap_bool,
+      excl_pkg         TYPE string,
+      cancel           TYPE abap_bool,
     END OF ty_popup .
 
   CONSTANTS c_new_branch_label TYPE string VALUE '+ create new ...' ##NO_TEXT.
 
+  METHODS popup_search_help
+    IMPORTING
+      !iv_tab_field TYPE string
+    RETURNING
+      VALUE(rv_value) TYPE ddshretval-fieldval
+    RAISING
+      zcx_abapgit_exception .
   METHODS popup_package_export
     EXPORTING
       !ev_package                    TYPE devclass
@@ -34,6 +42,8 @@ INTERFACE zif_abapgit_popups
     RAISING
       zcx_abapgit_exception .
   METHODS create_branch_popup
+    IMPORTING
+      iv_source_branch_name TYPE string
     EXPORTING
       !ev_name   TYPE string
       !ev_cancel TYPE abap_bool
@@ -59,7 +69,7 @@ INTERFACE zif_abapgit_popups
     IMPORTING
       !iv_url            TYPE string
       !iv_package        TYPE devclass OPTIONAL
-      !iv_branch         TYPE string DEFAULT 'refs/heads/master'
+      !iv_branch         TYPE string DEFAULT zif_abapgit_definitions=>c_git_branch-master
       !iv_freeze_package TYPE abap_bool OPTIONAL
       !iv_freeze_url     TYPE abap_bool OPTIONAL
       !iv_title          TYPE clike DEFAULT 'New Online Project'
@@ -152,6 +162,13 @@ INTERFACE zif_abapgit_popups
       !it_proxy_bypass       TYPE zif_abapgit_definitions=>ty_range_proxy_bypass_url
     RETURNING
       VALUE(rt_proxy_bypass) TYPE zif_abapgit_definitions=>ty_range_proxy_bypass_url
+    RAISING
+      zcx_abapgit_exception.
+  METHODS choose_pr_popup
+    IMPORTING
+      it_pulls TYPE zif_abapgit_pr_enum_provider=>tty_pulls
+    RETURNING
+      VALUE(rs_pull) TYPE zif_abapgit_pr_enum_provider=>ty_pull_request
     RAISING
       zcx_abapgit_exception.
 ENDINTERFACE.

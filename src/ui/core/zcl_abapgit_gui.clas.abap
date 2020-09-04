@@ -18,6 +18,7 @@ CLASS zcl_abapgit_gui DEFINITION
     CONSTANTS:
       BEGIN OF c_action,
         go_home TYPE string VALUE 'go_home',
+        go_db   TYPE string VALUE 'go_db',
       END OF c_action.
 
     INTERFACES zif_abapgit_gui_services.
@@ -214,12 +215,20 @@ CLASS ZCL_ABAPGIT_GUI IMPLEMENTATION.
 
   METHOD go_home.
 
-    DATA ls_stack LIKE LINE OF mt_stack.
+    DATA: ls_stack LIKE LINE OF mt_stack,
+          lv_mode  TYPE tabname.
 
     IF mi_router IS BOUND.
       CLEAR: mt_stack, mt_event_handlers.
       APPEND mi_router TO mt_event_handlers.
-      on_event( action = |{ c_action-go_home }| ). " doesn't accept strings directly
+      " on_event doesn't accept strings directly
+      GET PARAMETER ID 'DBT' FIELD lv_mode.
+      CASE lv_mode.
+        WHEN 'ZABAPGIT'.
+          on_event( action = |{ c_action-go_db }| ).
+        WHEN OTHERS.
+          on_event( action = |{ c_action-go_home }| ).
+      ENDCASE.
     ELSE.
       IF lines( mt_stack ) > 0.
         READ TABLE mt_stack INTO ls_stack INDEX 1.
@@ -405,37 +414,52 @@ CLASS ZCL_ABAPGIT_GUI IMPLEMENTATION.
 
   METHOD zif_abapgit_gui_services~cache_asset.
 
-    DATA: lv_xstr  TYPE xstring,
-          lt_xdata TYPE lvc_t_mime,
-          lv_size  TYPE int4.
+    DATA: lt_xdata TYPE lvc_t_mime,
+          lv_size  TYPE i,
+          lt_html  TYPE w3htmltab.
 
     ASSERT iv_text IS SUPPLIED OR iv_xdata IS SUPPLIED.
 
     IF iv_text IS SUPPLIED. " String input
-      lv_xstr = zcl_abapgit_convert=>string_to_xstring( iv_text ).
+
+      zcl_abapgit_convert=>string_to_tab( " FM SCMS_STRING_TO_FTEXT
+         EXPORTING
+           iv_str = iv_text
+         IMPORTING
+           et_tab = lt_html ).
+
+      mo_html_viewer->load_data(
+        EXPORTING
+          type         = iv_type
+          subtype      = iv_subtype
+          url          = iv_url
+        IMPORTING
+          assigned_url = rv_url
+        CHANGING
+          data_table   = lt_html
+        EXCEPTIONS
+          OTHERS       = 1 ).
     ELSE. " Raw input
-      lv_xstr = iv_xdata.
+      zcl_abapgit_convert=>xstring_to_bintab(
+        EXPORTING
+          iv_xstr   = iv_xdata
+        IMPORTING
+          ev_size   = lv_size
+          et_bintab = lt_xdata ).
+
+      mo_html_viewer->load_data(
+        EXPORTING
+          type         = iv_type
+          subtype      = iv_subtype
+          size         = lv_size
+          url          = iv_url
+        IMPORTING
+          assigned_url = rv_url
+        CHANGING
+          data_table   = lt_xdata
+        EXCEPTIONS
+          OTHERS       = 1 ).
     ENDIF.
-
-    zcl_abapgit_convert=>xstring_to_bintab(
-      EXPORTING
-        iv_xstr   = lv_xstr
-      IMPORTING
-        ev_size   = lv_size
-        et_bintab = lt_xdata ).
-
-    mo_html_viewer->load_data(
-      EXPORTING
-        type         = iv_type
-        subtype      = iv_subtype
-        size         = lv_size
-        url          = iv_url
-      IMPORTING
-        assigned_url = rv_url
-      CHANGING
-        data_table   = lt_xdata
-      EXCEPTIONS
-        OTHERS       = 1 ) ##NO_TEXT.
 
     ASSERT sy-subrc = 0. " Image data error
 

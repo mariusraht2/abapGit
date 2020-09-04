@@ -128,6 +128,7 @@ CLASS ZCL_ABAPGIT_DOT_ABAPGIT IMPLEMENTATION.
     APPEND '/.gitlab-ci.yml' TO ls_data-ignore.
     APPEND '/abaplint.json' TO ls_data-ignore.
     APPEND '/azure-pipelines.yml' TO ls_data-ignore.
+    APPEND '/.devcontainer.json' TO ls_data-ignore.
 
     CREATE OBJECT ro_dot_abapgit
       EXPORTING
@@ -167,7 +168,7 @@ CLASS ZCL_ABAPGIT_DOT_ABAPGIT IMPLEMENTATION.
     CALL TRANSFORMATION id
       OPTIONS value_handling = 'accept_data_loss'
       SOURCE XML lv_xml
-      RESULT data = rs_data ##NO_TEXT.
+      RESULT data = rs_data.
 
 * downward compatibility
     IF rs_data-folder_logic IS INITIAL.

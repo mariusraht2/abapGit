@@ -332,7 +332,7 @@ CLASS ZCL_ABAPGIT_BRANCH_OVERVIEW IMPLEMENTATION.
 
     li_progress->show(
       iv_current = 1
-      iv_text    = |Get git objects { io_repo->get_name( ) }| ) ##NO_TEXT.
+      iv_text    = |Get git objects { io_repo->get_name( ) }| ).
 
 * get objects directly from git, mo_repo only contains a shallow clone of only
 * the selected branch
@@ -357,7 +357,7 @@ CLASS ZCL_ABAPGIT_BRANCH_OVERVIEW IMPLEMENTATION.
       INSERT ls_tag INTO TABLE mt_tags.
     ENDLOOP.
 
-    zcl_abapgit_git_transport=>upload_pack(
+    zcl_abapgit_git_transport=>upload_pack_by_branch(
       EXPORTING
         iv_url         = io_repo->get_url( )
         iv_branch_name = io_repo->get_branch_name( )
@@ -388,7 +388,7 @@ CLASS ZCL_ABAPGIT_BRANCH_OVERVIEW IMPLEMENTATION.
                          WITH KEY sha1 = <ls_object>-sha1.
       ASSERT sy-subrc = 0.
 
-      <ls_tag>-name         = |refs/tags/{ ls_raw-tag }|.
+      <ls_tag>-name         = zif_abapgit_definitions=>c_git_branch-tags_prefix && ls_raw-tag.
       <ls_tag>-sha1         = <ls_object>-sha1.
       <ls_tag>-object       = ls_raw-object.
       <ls_tag>-type         = zif_abapgit_definitions=>c_git_branch_type-annotated_tag.

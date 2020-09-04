@@ -109,7 +109,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
 
   METHOD constructor.
     super->constructor( ).
-    ms_control-page_title = 'SETTINGS'.
+    ms_control-page_title = 'Settings'.
   ENDMETHOD.
 
 
@@ -128,7 +128,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
 
     DATA lv_serialized_post_data TYPE string.
 
-    CONCATENATE LINES OF it_postdata INTO lv_serialized_post_data.
+    lv_serialized_post_data = zcl_abapgit_utils=>translate_postdata( it_postdata ).
     rt_post_fields = zcl_abapgit_html_action_utils=>parse_fields( lv_serialized_post_data ).
 
   ENDMETHOD.
@@ -240,8 +240,6 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     READ TABLE mt_post_fields ASSIGNING <ls_post_field> WITH KEY name = 'comment_default'.
     IF sy-subrc = 0.
       mo_settings->set_commitmsg_comment_default( <ls_post_field>-value ).
-    ELSE.
-      mo_settings->set_commitmsg_comment_default( zcl_abapgit_settings=>c_commitmsg_comment_default ).
     ENDIF.
 
     READ TABLE mt_post_fields ASSIGNING <ls_post_field> WITH KEY name = 'body_size'.
@@ -260,17 +258,11 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
 
   METHOD post_development_internals.
 
-    IF is_post_field_checked( 'critical_tests' ) = abap_true.
-      mo_settings->set_run_critical_tests( abap_true ).
-    ELSE.
-      mo_settings->set_run_critical_tests( abap_false ).
-    ENDIF.
+    mo_settings->set_run_critical_tests( is_post_field_checked( 'critical_tests' ) ).
 
-    IF is_post_field_checked( 'experimental_features' ) = abap_true.
-      mo_settings->set_experimental_features( abap_true ).
-    ELSE.
-      mo_settings->set_experimental_features( abap_false ).
-    ENDIF.
+    mo_settings->set_experimental_features( is_post_field_checked( 'experimental_features' ) ).
+
+    mo_settings->set_activate_wo_popup( is_post_field_checked( 'activate_wo_popup' ) ).
 
   ENDMETHOD.
 
@@ -345,6 +337,8 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     lo_settings_persistence = zcl_abapgit_persist_settings=>get_instance( ).
     mo_settings = lo_settings_persistence->read( ).
 
+    mt_proxy_bypass = mo_settings->get_proxy_bypass( ).
+
   ENDMETHOD.
 
 
@@ -359,7 +353,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     CREATE OBJECT ro_html.
     ro_html->add( |<h2>ABAP Development Tools (ADT)</h2>| ).
     ro_html->add( `<input type="checkbox" name="adt_jump_enabled" value="X" `
-                   && lv_checked && ` > Enable jump to ADT first` ).
+                   && lv_checked && ` > Enable Jump to ADT First` ).
     ro_html->add( |<br>| ).
     ro_html->add( |<br>| ).
   ENDMETHOD.
@@ -369,17 +363,18 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     CREATE OBJECT ro_html.
 
     ro_html->add( |<h2>Commit Message</h2>| ).
-    ro_html->add( |<label for="comment_length">Max. length of comment (recommendation 50)</label>| ).
+    ro_html->add( |<label for="comment_length" title="(Recommendation 50)">Max. Length of Comment</label>| ).
     ro_html->add( |<br>| ).
     ro_html->add( |<input name="comment_length" type="number" step="10" size="3" maxlength="3" min="50"| &&
                   | value="{ mo_settings->get_commitmsg_comment_length( ) }">| ).
     ro_html->add( |<br>| ).
-    ro_html->add( |<label for="comment_default">Default for comment (possible variables: $OBJECT, $FILE)</label>| ).
+    ro_html->add( |<label for="comment_default"| &&
+                  |title="(Possible Variables: $OBJECT, $FILE)">Default for Comment</label>| ).
     ro_html->add( |<br>| ).
     ro_html->add( |<input name="comment_default" type="text" size="80" maxlength="255"| &&
                   | value="{ mo_settings->get_commitmsg_comment_default( ) }">| ).
     ro_html->add( |<br>| ).
-    ro_html->add( |<label for="body_size">Max. line size of body (recommendation 72)</label>| ).
+    ro_html->add( |<label for="body_size" title="(Recommendation 72)">Max. Line Size of Body</label>| ).
     ro_html->add( |<br>| ).
     ro_html->add( |<input name="body_size" type="number" size="3" maxlength="3" min="50"| &&
                   | value="{ mo_settings->get_commitmsg_body_size( ) }">| ).
@@ -390,33 +385,33 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
 
   METHOD render_content.
 
-    CREATE OBJECT ro_html.
+    CREATE OBJECT ri_html TYPE zcl_abapgit_html.
 
     read_settings( ).
 
-    ro_html->add( render_form_begin( ) ).
-    ro_html->add( render_section_begin( |Global settings| ) ).
-    ro_html->add( render_proxy( ) ).
-    ro_html->add( |<hr>| ).
-    ro_html->add( render_commit_msg( ) ).
-    ro_html->add( |<hr>| ).
-    ro_html->add( render_development_internals( ) ).
-    ro_html->add( render_section_end( ) ).
-    ro_html->add( render_section_begin( |User specific settings| ) ).
-    ro_html->add( render_start_up( ) ).
-    ro_html->add( render_max_lines( ) ).
-    ro_html->add( render_icon_scaling( ) ).
-    ro_html->add( render_ui_theme( ) ).
-    ro_html->add( |<hr>| ).
-    ro_html->add( render_adt_jump_enabled( ) ).
-    ro_html->add( |<hr>| ).
-    ro_html->add( render_parallel_proc( ) ).
-    ro_html->add( |<hr>| ).
-    ro_html->add( render_link_hints( ) ).
-    ro_html->add( |<hr>| ).
-    ro_html->add( render_hotkeys( ) ).
-    ro_html->add( render_section_end( ) ).
-    ro_html->add( render_form_end( ) ).
+    ri_html->add( render_form_begin( ) ).
+    ri_html->add( render_section_begin( |Global Settings| ) ).
+    ri_html->add( render_proxy( ) ).
+    ri_html->add( |<hr>| ).
+    ri_html->add( render_commit_msg( ) ).
+    ri_html->add( |<hr>| ).
+    ri_html->add( render_development_internals( ) ).
+    ri_html->add( render_section_end( ) ).
+    ri_html->add( render_section_begin( |User Specific Settings| ) ).
+    ri_html->add( render_start_up( ) ).
+    ri_html->add( render_max_lines( ) ).
+    ri_html->add( render_icon_scaling( ) ).
+    ri_html->add( render_ui_theme( ) ).
+    ri_html->add( |<hr>| ).
+    ri_html->add( render_adt_jump_enabled( ) ).
+    ri_html->add( |<hr>| ).
+    ri_html->add( render_parallel_proc( ) ).
+    ri_html->add( |<hr>| ).
+    ri_html->add( render_link_hints( ) ).
+    ri_html->add( |<hr>| ).
+    ri_html->add( render_hotkeys( ) ).
+    ri_html->add( render_section_end( ) ).
+    ri_html->add( render_form_end( ) ).
 
   ENDMETHOD.
 
@@ -424,7 +419,8 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
   METHOD render_development_internals.
 
     DATA: lv_critical_tests TYPE string,
-          lv_experimental   TYPE string.
+          lv_experimental   TYPE string,
+          lv_act_wo_popup   TYPE string.
 
     IF mo_settings->get_run_critical_tests( ) = abap_true.
       lv_critical_tests = 'checked'.
@@ -434,13 +430,20 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
       lv_experimental = 'checked'.
     ENDIF.
 
+    IF mo_settings->get_activate_wo_popup( ) = abap_true.
+      lv_act_wo_popup = 'checked'.
+    ENDIF.
+
     CREATE OBJECT ro_html.
-    ro_html->add( |<h2>abapGit Development Internals settings</h2>| ).
+    ro_html->add( |<h2>abapGit Development Internals</h2>| ).
     ro_html->add( `<input type="checkbox" name="critical_tests" `
-                   && lv_critical_tests && ` > Enable critical unit tests (see LTCL_DANGEROUS)` ).
+                   && lv_critical_tests && ` > Enable Critical Unit Tests (See LTCL_DANGEROUS)` ).
     ro_html->add( |<br>| ).
     ro_html->add( `<input type="checkbox" name="experimental_features" `
-                   && lv_experimental && ` > Enable experimental features` ).
+                   && lv_experimental && ` > Enable Experimental Features` ).
+    ro_html->add( |<br>| ).
+    ro_html->add( `<input type="checkbox" name="activate_wo_popup" `
+                   && lv_act_wo_popup && ` > Activate Objects Without Popup` ).
     ro_html->add( |<br>| ).
     ro_html->add( |<br>| ).
 
@@ -518,8 +521,8 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
 
     CREATE OBJECT ro_html.
 
-    ro_html->add( |<h2>UI Icon scaling</h2>| ).
-    ro_html->add( |<label for="icon_scaling">High DPI icon scaling</label>| ).
+    ro_html->add( |<h2>UI Icon Scaling</h2>| ).
+    ro_html->add( |<label for="icon_scaling">High DPI Icon Scaling</label>| ).
     ro_html->add( |<br>| ).
     ro_html->add( |<select name="icon_scaling" size="3">| ).
     ro_html->add( |<option value=""{ ls_sel-auto }>Auto</option>| ).
@@ -545,13 +548,13 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     lv_link_hint_key = mo_settings->get_link_hint_key( ).
 
     CREATE OBJECT ro_html.
-    ro_html->add( |<h2>Vimium like link hints</h2>| ).
+    ro_html->add( |<h2>Vimium-like Link Hints</h2>| ).
     ro_html->add( `<input type="checkbox" name="link_hints_enabled" value="X" `
-                   && lv_checked && ` > Enable Vimium like link hints` ).
+                   && lv_checked && ` > Enable Vimium-like Link Hints` ).
     ro_html->add( |<br>| ).
     ro_html->add( |<br>| ).
     ro_html->add( |<input type="text" name="link_hint_key" size="1" maxlength="1" value="{ lv_link_hint_key }" |
-               && |> Single key to activate links| ).
+               && |> Key to Activate Links| ).
 
     ro_html->add( |<br>| ).
     ro_html->add( |<br>| ).
@@ -563,7 +566,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     CREATE OBJECT ro_html.
 
     ro_html->add( |<h2>List size</h2>| ).
-    ro_html->add( |<label for="max_lines">Max. # of objects listed (0 = all)</label>| ).
+    ro_html->add( |<label for="max_lines">Max. # of Objects Listed (0 = All)</label>| ).
     ro_html->add( |<br>| ).
     ro_html->add( `<input name="max_lines" type="text" size="5" value="` && mo_settings->get_max_lines( ) && `">` ).
     ro_html->add( |<br>| ).
@@ -580,9 +583,9 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     ENDIF.
 
     CREATE OBJECT ro_html.
-    ro_html->add( |<h2>Parallel processing</h2>| ).
+    ro_html->add( |<h2>Parallel Processing</h2>| ).
     ro_html->add( `<input type="checkbox" name="parallel_proc_disabled" value="X" `
-                   && lv_checked && ` > Disable parallel processing` ).
+                   && lv_checked && ` > Disable Parallel Processing` ).
     ro_html->add( |<br>| ).
     ro_html->add( |<br>| ).
   ENDMETHOD.
@@ -611,7 +614,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     ENDIF.
     ro_html->add( |<br>| ).
     ro_html->add( |<br>| ).
-    ro_html->add( |<label for="proxy_bypass">Bypass proxy settings for these Hosts & Domains</label>| ).
+    ro_html->add( |<label for="proxy_bypass">Bypass Proxy Settings for These Hosts & Domains</label>| ).
     ro_html->add( |<br>| ).
     ro_html->add( |<button type="button" name="proxy_bypass" class="grey-set"|
                 & |onclick="location.href='sapevent:{ c_action-change_proxy_bypass }';">Maintain</button>| ).
@@ -650,9 +653,9 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
     ENDIF.
 
     CREATE OBJECT ro_html.
-    ro_html->add( |<h2>Start up</h2>| ).
+    ro_html->add( |<h2>Startup</h2>| ).
     ro_html->add( `<input type="checkbox" name="show_default_repo" value="X" `
-                   && lv_checked && ` > Show last repo` ).
+                   && lv_checked && ` > Show Last Opened Repository` ).
     ro_html->add( |<br>| ).
     ro_html->add( |<br>| ).
   ENDMETHOD.
@@ -729,7 +732,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SETTINGS IMPLEMENTATION.
 
         ev_state = zcl_abapgit_gui=>c_event_state-go_back.
       WHEN c_action-change_proxy_bypass.
-        mt_proxy_bypass = zcl_abapgit_ui_factory=>get_popups( )->popup_proxy_bypass( mo_settings->get_proxy_bypass( ) ).
+        mt_proxy_bypass = zcl_abapgit_ui_factory=>get_popups( )->popup_proxy_bypass( mt_proxy_bypass ).
 
         ev_state = zcl_abapgit_gui=>c_event_state-no_more_act.
     ENDCASE.

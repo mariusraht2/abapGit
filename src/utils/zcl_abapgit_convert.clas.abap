@@ -48,43 +48,46 @@ CLASS zcl_abapgit_convert DEFINITION
         VALUE(rt_lines) TYPE string_table .
     CLASS-METHODS conversion_exit_isola_output
       IMPORTING
-        iv_spras        TYPE spras
+        !iv_spras       TYPE spras
       RETURNING
-        VALUE(rv_spras) TYPE laiso.
+        VALUE(rv_spras) TYPE laiso .
     CLASS-METHODS alpha_output
       IMPORTING
-        iv_val        TYPE clike
+        !iv_val       TYPE clike
       RETURNING
-        VALUE(rv_str) TYPE string.
-
+        VALUE(rv_str) TYPE string .
     CLASS-METHODS string_to_xstring
       IMPORTING
-        iv_str         TYPE string
+        !iv_str        TYPE string
       RETURNING
-        VALUE(rv_xstr) TYPE xstring.
-
+        VALUE(rv_xstr) TYPE xstring .
+    CLASS-METHODS string_to_tab
+      IMPORTING
+        !iv_str       TYPE string
+      EXPORTING
+        VALUE(et_tab) TYPE STANDARD TABLE .
     CLASS-METHODS base64_to_xstring
       IMPORTING
-        iv_base64      TYPE string
+        !iv_base64     TYPE string
       RETURNING
-        VALUE(rv_xstr) TYPE xstring.
-
+        VALUE(rv_xstr) TYPE xstring .
     CLASS-METHODS bintab_to_xstring
       IMPORTING
-        it_bintab      TYPE lvc_t_mime
-        iv_size        TYPE i
+        !it_bintab     TYPE lvc_t_mime
+        !iv_size       TYPE i
       RETURNING
-        VALUE(rv_xstr) TYPE xstring.
-
+        VALUE(rv_xstr) TYPE xstring .
     CLASS-METHODS xstring_to_bintab
       IMPORTING
-        iv_xstr   TYPE xstring
+        !iv_xstr   TYPE xstring
       EXPORTING
-        ev_size   TYPE i
-        et_bintab TYPE lvc_t_mime.
-
+        !ev_size   TYPE i
+        !et_bintab TYPE lvc_t_mime .
   PROTECTED SECTION.
   PRIVATE SECTION.
+
+    CLASS-DATA go_convert_out TYPE REF TO cl_abap_conv_out_ce .
+    CLASS-DATA go_convert_in TYPE REF TO cl_abap_conv_in_ce .
 ENDCLASS.
 
 
@@ -202,6 +205,21 @@ CLASS ZCL_ABAPGIT_CONVERT IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD string_to_tab.
+
+    CLEAR et_tab[].
+    CALL FUNCTION 'SCMS_STRING_TO_FTEXT'
+      EXPORTING
+        text      = iv_str
+*     IMPORTING
+*       LENGTH    = LENGTH
+      TABLES
+        ftext_tab = et_tab.
+    ASSERT sy-subrc = 0.
+
+  ENDMETHOD.
+
+
   METHOD string_to_xstring.
 
     CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
@@ -218,14 +236,14 @@ CLASS ZCL_ABAPGIT_CONVERT IMPLEMENTATION.
 
   METHOD string_to_xstring_utf8.
 
-    DATA: lo_obj TYPE REF TO cl_abap_conv_out_ce.
-
-
     TRY.
-        lo_obj = cl_abap_conv_out_ce=>create( encoding = 'UTF-8' ).
+        IF go_convert_out IS INITIAL.
+          go_convert_out = cl_abap_conv_out_ce=>create( encoding = 'UTF-8' ).
+        ENDIF.
 
-        lo_obj->convert( EXPORTING data = iv_string
-                         IMPORTING buffer = rv_xstring ).
+        go_convert_out->convert(
+          EXPORTING data = iv_string
+          IMPORTING buffer = rv_xstring ).
 
       CATCH cx_parameter_invalid_range
             cx_sy_codepage_converter_init
@@ -289,18 +307,17 @@ CLASS ZCL_ABAPGIT_CONVERT IMPLEMENTATION.
 
   METHOD xstring_to_string_utf8.
 
-    DATA: lv_len TYPE i,
-          lo_obj TYPE REF TO cl_abap_conv_in_ce.
-
-
     TRY.
-        lo_obj = cl_abap_conv_in_ce=>create(
-            input    = iv_data
-            encoding = 'UTF-8' ).
-        lv_len = xstrlen( iv_data ).
+        IF go_convert_in IS INITIAL.
+          go_convert_in = cl_abap_conv_in_ce=>create( encoding = 'UTF-8' ).
+        ENDIF.
 
-        lo_obj->read( EXPORTING n    = lv_len
-                      IMPORTING data = rv_string ).
+        go_convert_in->convert(
+          EXPORTING
+            input = iv_data
+            n     = xstrlen( iv_data )
+          IMPORTING
+            data  = rv_string ).
 
       CATCH cx_parameter_invalid_range
             cx_sy_codepage_converter_init

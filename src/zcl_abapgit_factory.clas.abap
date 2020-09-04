@@ -1,8 +1,10 @@
 CLASS zcl_abapgit_factory DEFINITION
   PUBLIC
   CREATE PRIVATE
-  GLOBAL FRIENDS zcl_abapgit_injector.
+  GLOBAL FRIENDS zcl_abapgit_injector .
+
   PUBLIC SECTION.
+
     CLASS-METHODS get_tadir
       RETURNING
         VALUE(ri_tadir) TYPE REF TO zif_abapgit_tadir .
@@ -35,11 +37,11 @@ CLASS zcl_abapgit_factory DEFINITION
       RETURNING
         VALUE(ri_environment) TYPE REF TO zif_abapgit_environment .
     CLASS-METHODS get_longtexts
-      IMPORTING
-        iv_longtexts_name   TYPE string OPTIONAL
       RETURNING
-        VALUE(ro_longtexts) TYPE REF TO zcl_abapgit_longtexts.
-
+        VALUE(ri_longtexts) TYPE REF TO zif_abapgit_longtexts .
+    CLASS-METHODS get_http_agent
+      RETURNING
+        VALUE(ri_http_agent) TYPE REF TO zif_abapgit_http_agent .
   PROTECTED SECTION.
   PRIVATE SECTION.
 
@@ -50,7 +52,7 @@ CLASS zcl_abapgit_factory DEFINITION
       END OF ty_sap_package .
     TYPES:
       tty_sap_package TYPE HASHED TABLE OF ty_sap_package
-                                  WITH UNIQUE KEY package .
+                                    WITH UNIQUE KEY package .
     TYPES:
       BEGIN OF ty_code_inspector,
         package  TYPE devclass,
@@ -58,28 +60,21 @@ CLASS zcl_abapgit_factory DEFINITION
       END OF ty_code_inspector .
     TYPES:
       tty_code_inspector TYPE HASHED TABLE OF ty_code_inspector
-                                     WITH UNIQUE KEY package .
+                                       WITH UNIQUE KEY package .
 
-    TYPES:
-      BEGIN OF ty_longtexts,
-        longtexts_name TYPE string,
-        instance       TYPE REF TO zcl_abapgit_longtexts,
-      END OF ty_longtexts .
-    TYPES:
-      tty_longtexts TYPE HASHED TABLE OF ty_longtexts
-                         WITH UNIQUE KEY longtexts_name .
     CLASS-DATA gi_tadir TYPE REF TO zif_abapgit_tadir .
     CLASS-DATA gt_sap_package TYPE tty_sap_package .
     CLASS-DATA gt_code_inspector TYPE tty_code_inspector .
     CLASS-DATA gi_stage_logic TYPE REF TO zif_abapgit_stage_logic .
     CLASS-DATA gi_cts_api TYPE REF TO zif_abapgit_cts_api .
     CLASS-DATA gi_environment TYPE REF TO zif_abapgit_environment .
-    CLASS-DATA gt_longtexts TYPE tty_longtexts.
+    CLASS-DATA gi_longtext TYPE REF TO zif_abapgit_longtexts .
+    CLASS-DATA gi_http_agent TYPE REF TO zif_abapgit_http_agent .
 ENDCLASS.
 
 
 
-CLASS zcl_abapgit_factory IMPLEMENTATION.
+CLASS ZCL_ABAPGIT_FACTORY IMPLEMENTATION.
 
 
   METHOD get_branch_overview.
@@ -134,6 +129,27 @@ CLASS zcl_abapgit_factory IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD get_http_agent.
+
+    IF gi_http_agent IS BOUND.
+      ri_http_agent = gi_http_agent.
+    ELSE.
+      ri_http_agent = zcl_abapgit_http_agent=>create( ).
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD get_longtexts.
+
+    IF gi_longtext IS NOT BOUND.
+      CREATE OBJECT gi_longtext TYPE zcl_abapgit_longtexts.
+    ENDIF.
+    ri_longtexts = gi_longtext.
+
+  ENDMETHOD.
+
+
   METHOD get_sap_package.
 
     DATA: ls_sap_package TYPE ty_sap_package.
@@ -180,30 +196,4 @@ CLASS zcl_abapgit_factory IMPLEMENTATION.
     ri_tadir = gi_tadir.
 
   ENDMETHOD.
-
-
-  METHOD get_longtexts.
-
-    DATA: ls_longtext TYPE ty_longtexts.
-    FIELD-SYMBOLS: <ls_longtext> TYPE ty_longtexts.
-
-    READ TABLE gt_longtexts ASSIGNING <ls_longtext>
-                            WITH TABLE KEY longtexts_name = iv_longtexts_name.
-    IF sy-subrc <> 0.
-
-      ls_longtext-longtexts_name = iv_longtexts_name.
-      CREATE OBJECT ls_longtext-instance
-        EXPORTING
-          iv_longtexts_name = iv_longtexts_name.
-
-      INSERT ls_longtext
-        INTO TABLE gt_longtexts
-        ASSIGNING <ls_longtext>.
-
-    ENDIF.
-
-    ro_longtexts = <ls_longtext>-instance.
-
-  ENDMETHOD.
-
 ENDCLASS.

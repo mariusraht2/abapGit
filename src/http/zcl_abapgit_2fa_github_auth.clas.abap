@@ -93,8 +93,10 @@ CLASS ZCL_ABAPGIT_2FA_GITHUB_AUTH IMPLEMENTATION.
 
     " https://developer.github.com/v3/auth/#working-with-two-factor-authentication
     ri_client->propertytype_accept_cookie = if_http_client=>co_enabled.
-    ri_client->request->set_header_field( name = c_otp_header_name value = iv_2fa_token ).
-    ri_client->authenticate( username = iv_username password = iv_password ).
+    ri_client->request->set_header_field( name = c_otp_header_name
+                                          value = iv_2fa_token ).
+    ri_client->authenticate( username = iv_username
+                             password = iv_password ).
     ri_client->propertytype_logon_popup = if_http_client=>co_disabled.
 
     ri_client->send( EXCEPTIONS OTHERS = 1 ).
@@ -235,7 +237,7 @@ CLASS ZCL_ABAPGIT_2FA_GITHUB_AUTH IMPLEMENTATION.
     IF rv_access_token IS INITIAL.
       RAISE EXCEPTION TYPE zcx_abapgit_2fa_gen_failed
         EXPORTING
-          mv_text = 'Token generation failed: parser error' ##NO_TEXT.
+          mv_text = 'Token generation failed: parser error'.
     ENDIF.
 
     " GitHub might need some time until the new token is ready to use, give it a second
@@ -327,7 +329,8 @@ CLASS ZCL_ABAPGIT_2FA_GITHUB_AUTH IMPLEMENTATION.
     li_client->request->set_method( if_http_request=>co_request_method_post ).
 
     " Try to authenticate, if 2FA is required there will be a specific response header
-    li_client->authenticate( username = iv_username password = iv_password ).
+    li_client->authenticate( username = iv_username
+                             password = iv_password ).
 
     li_client->send( EXCEPTIONS OTHERS = 1 ).
     IF sy-subrc <> 0.
