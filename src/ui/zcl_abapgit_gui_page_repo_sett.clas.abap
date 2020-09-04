@@ -344,7 +344,7 @@ CLASS zcl_abapgit_gui_page_repo_sett IMPLEMENTATION.
       iv_name  = 'Exclude Packages'
       iv_value = |<textarea name="exclude_packages" rows="{
                    lines( lo_repo_online->get_local_settings( )-excluded_packages )
-                   }" cols="50">{ lv_exclude }</textarea>| ) ).
+                   }" cols="46">{ lv_exclude }</textarea>| ) ).
 
     ii_html->add( '</table>' ).
 
