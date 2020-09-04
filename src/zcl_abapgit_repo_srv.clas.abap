@@ -490,7 +490,7 @@ CLASS ZCL_ABAPGIT_REPO_SRV IMPLEMENTATION.
           lv_reason              TYPE string.
 
     FIELD-SYMBOLS: <ls_repo>  LIKE LINE OF lt_repos.
-   
+
     IF iv_package IS INITIAL.
       zcx_abapgit_exception=>raise( 'add, package empty' ).
     ENDIF.
