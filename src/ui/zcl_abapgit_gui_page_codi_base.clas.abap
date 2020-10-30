@@ -216,17 +216,24 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_CODI_BASE IMPLEMENTATION.
        ( is_result-sobjname = is_result-objname AND
          is_result-sobjtype = is_result-sobjtype ).
       lv_obj_txt = |{ is_result-objtype } { is_result-objname }|.
-    ELSEIF is_result-objtype = 'CLAS'.
+    ELSEIF is_result-objtype = 'CLAS' OR
+         ( is_result-objtype = 'PROG' AND NOT is_result-sobjname+30(*) IS INITIAL ).
       TRY.
           CASE is_result-sobjname+30(*).
             WHEN seop_incextapp_definition.
-              lv_obj_txt = |{ is_result-objname } : Local Definitions|.
+              lv_obj_txt = |CLAS { is_result-objname } : Local Definitions|.
             WHEN seop_incextapp_implementation.
-              lv_obj_txt = |{ is_result-objname } : Local Implementations|.
+              lv_obj_txt = |CLAS { is_result-objname } : Local Implementations|.
             WHEN seop_incextapp_macros.
-              lv_obj_txt = |{ is_result-objname } : Macros|.
+              lv_obj_txt = |CLAS { is_result-objname } : Macros|.
             WHEN seop_incextapp_testclasses.
-              lv_obj_txt = |{ is_result-objname } : Test Classes|.
+              lv_obj_txt = |CLAS { is_result-objname } : Test Classes|.
+            WHEN 'CU'.
+              lv_obj_txt = |CLAS { is_result-objname } : Public Section|.
+            WHEN 'CO'.
+              lv_obj_txt = |CLAS { is_result-objname } : Protected Section|.
+            WHEN 'CI'.
+              lv_obj_txt = |CLAS { is_result-objname } : Private Section|.
             WHEN OTHERS.
               cl_oo_classname_service=>get_method_by_include(
                 EXPORTING
@@ -238,9 +245,9 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_CODI_BASE IMPLEMENTATION.
                   method_not_existing = 2
                   OTHERS              = 3 ).
               IF sy-subrc = 0.
-                lv_obj_txt = |{ ls_mtdkey-clsname }->{ ls_mtdkey-cpdname }|.
+                lv_obj_txt = |CLAS { ls_mtdkey-clsname }->{ ls_mtdkey-cpdname }|.
               ELSE.
-                lv_obj_txt = is_result-sobjname.
+                lv_obj_txt = |{ is_result-objtype } { is_result-sobjname }|.
               ENDIF.
 
           ENDCASE.
@@ -284,11 +291,11 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_CODI_BASE IMPLEMENTATION.
           lv_line_number_s TYPE string,
           lv_line_number   TYPE i.
 
-    lv_temp = replace( val   = iv_action
+    lv_temp = replace( val   = ii_event->mv_action
                        regex = |^{ c_ci_sig }|
                        with  = `` ).
 
-    IF lv_temp <> iv_action. " CI navigation request detected
+    IF lv_temp <> ii_event->mv_action. " CI navigation request detected
 
       SPLIT lv_temp AT c_object_separator INTO lv_main_object lv_sub_object lv_line_number_s.
       ls_item-obj_type = lv_main_object(4).
@@ -305,24 +312,21 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_CODI_BASE IMPLEMENTATION.
             is_sub_item    = ls_sub_item
             iv_line_number = lv_line_number ).
 
-      ev_state = zcl_abapgit_gui=>c_event_state-no_more_act.
+      rs_handled-state = zcl_abapgit_gui=>c_event_state-no_more_act.
 
     ENDIF.
 
-    CASE iv_action.
+    CASE ii_event->mv_action.
 
       WHEN c_actions-sort_1.
         SORT mt_result BY objtype objname test code sobjtype sobjname line col.
-        ei_page = me.
-        ev_state = zcl_abapgit_gui=>c_event_state-re_render.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-re_render.
       WHEN c_actions-sort_2.
         SORT mt_result BY objtype objname sobjtype sobjname line col test code.
-        ei_page = me.
-        ev_state = zcl_abapgit_gui=>c_event_state-re_render.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-re_render.
       WHEN c_actions-sort_3.
         SORT mt_result BY test code objtype objname sobjtype sobjname line col.
-        ei_page = me.
-        ev_state = zcl_abapgit_gui=>c_event_state-re_render.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-re_render.
 
     ENDCASE.
 

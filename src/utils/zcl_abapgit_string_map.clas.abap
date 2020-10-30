@@ -11,11 +11,16 @@ CLASS zcl_abapgit_string_map DEFINITION
         v TYPE string,
       END OF ty_entry.
     TYPES:
-      tts_entries TYPE SORTED TABLE OF ty_entry WITH UNIQUE KEY k.
+      ty_entries TYPE SORTED TABLE OF ty_entry WITH UNIQUE KEY k.
 
     CLASS-METHODS create
+      IMPORTING
+        iv_case_insensitive TYPE abap_bool DEFAULT abap_false
       RETURNING
         VALUE(ro_instance) TYPE REF TO zcl_abapgit_string_map.
+    METHODS constructor
+      IMPORTING
+        iv_case_insensitive TYPE abap_bool DEFAULT abap_false.
     METHODS get
       IMPORTING
         iv_key        TYPE string
@@ -53,13 +58,20 @@ CLASS zcl_abapgit_string_map DEFINITION
         !cs_container TYPE any
       RAISING
         zcx_abapgit_exception.
+    METHODS strict
+      IMPORTING
+        !iv_strict TYPE abap_bool DEFAULT abap_true
+      RETURNING
+        VALUE(ro_instance) TYPE REF TO zcl_abapgit_string_map .
     METHODS freeze.
 
-    DATA mt_entries TYPE tts_entries READ-ONLY.
+    DATA mt_entries TYPE ty_entries READ-ONLY.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA mv_read_only TYPE abap_bool.
+    DATA mv_is_strict TYPE abap_bool.
+    DATA mv_case_insensitive TYPE abap_bool.
 
 ENDCLASS.
 
@@ -76,8 +88,16 @@ CLASS ZCL_ABAPGIT_STRING_MAP IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD constructor.
+    mv_is_strict = abap_true.
+    mv_case_insensitive = iv_case_insensitive.
+  ENDMETHOD.
+
+
   METHOD create.
-    CREATE OBJECT ro_instance.
+    CREATE OBJECT ro_instance
+      EXPORTING
+        iv_case_insensitive = iv_case_insensitive.
   ENDMETHOD.
 
 
@@ -99,8 +119,16 @@ CLASS ZCL_ABAPGIT_STRING_MAP IMPLEMENTATION.
 
   METHOD get.
 
+    DATA lv_key LIKE iv_key.
     FIELD-SYMBOLS <ls_entry> LIKE LINE OF mt_entries.
-    READ TABLE mt_entries ASSIGNING <ls_entry> WITH KEY k = iv_key.
+
+    IF mv_case_insensitive = abap_true.
+      lv_key = to_upper( iv_key ).
+    ELSE.
+      lv_key = iv_key.
+    ENDIF.
+
+    READ TABLE mt_entries ASSIGNING <ls_entry> WITH KEY k = lv_key.
     IF sy-subrc IS INITIAL.
       rv_val = <ls_entry>-v.
     ENDIF.
@@ -123,6 +151,7 @@ CLASS ZCL_ABAPGIT_STRING_MAP IMPLEMENTATION.
 
   METHOD set.
 
+    DATA lv_key LIKE iv_key.
     DATA ls_entry LIKE LINE OF mt_entries.
     FIELD-SYMBOLS <ls_entry> LIKE LINE OF mt_entries.
 
@@ -130,11 +159,17 @@ CLASS ZCL_ABAPGIT_STRING_MAP IMPLEMENTATION.
       zcx_abapgit_exception=>raise( 'Cannot set. This string map is immutable' ).
     ENDIF.
 
-    READ TABLE mt_entries ASSIGNING <ls_entry> WITH KEY k = iv_key.
+    IF mv_case_insensitive = abap_true.
+      lv_key = to_upper( iv_key ).
+    ELSE.
+      lv_key = iv_key.
+    ENDIF.
+
+    READ TABLE mt_entries ASSIGNING <ls_entry> WITH KEY k = lv_key.
     IF sy-subrc IS INITIAL.
       <ls_entry>-v = iv_val.
     ELSE.
-      ls_entry-k = iv_key.
+      ls_entry-k = lv_key.
       ls_entry-v = iv_val.
       INSERT ls_entry INTO TABLE mt_entries.
     ENDIF.
@@ -148,6 +183,12 @@ CLASS ZCL_ABAPGIT_STRING_MAP IMPLEMENTATION.
 
     rv_size = lines( mt_entries ).
 
+  ENDMETHOD.
+
+
+  METHOD strict.
+    mv_is_strict = iv_strict.
+    ro_instance = me.
   ENDMETHOD.
 
 
@@ -172,6 +213,8 @@ CLASS ZCL_ABAPGIT_STRING_MAP IMPLEMENTATION.
       IF sy-subrc = 0.
         " TODO check target type ?
         <lv_val> = <ls_entry>-v.
+      ELSEIF mv_is_strict = abap_false.
+        CONTINUE.
       ELSE.
         zcx_abapgit_exception=>raise( |Component { lv_field } not found in target| ).
       ENDIF.

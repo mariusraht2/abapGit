@@ -52,11 +52,11 @@ CLASS zcl_abapgit_gui_page_merge_res DEFINITION
     DATA ms_diff_file TYPE ty_file_diff .
     DATA mv_current_conflict_index TYPE sy-tabix .
     DATA mv_merge_mode TYPE string .
-    DATA mt_conflicts TYPE zif_abapgit_definitions=>tt_merge_conflict .
+    DATA mt_conflicts TYPE zif_abapgit_definitions=>ty_merge_conflict_tt .
 
     METHODS apply_merged_content
       IMPORTING
-        !it_postdata TYPE cnht_post_data_tab
+        !ii_event TYPE REF TO zif_abapgit_gui_event
       RAISING
         zcx_abapgit_exception .
     METHODS build_menu
@@ -73,7 +73,7 @@ CLASS zcl_abapgit_gui_page_merge_res DEFINITION
         !is_diff_line  TYPE zif_abapgit_definitions=>ty_diff
         !is_diff       TYPE ty_file_diff
       RETURNING
-        VALUE(ro_html) TYPE REF TO zcl_abapgit_html .
+        VALUE(ri_html) TYPE REF TO zif_abapgit_html .
     METHODS render_diff
       IMPORTING
         !is_diff       TYPE ty_file_diff
@@ -85,17 +85,17 @@ CLASS zcl_abapgit_gui_page_merge_res DEFINITION
       IMPORTING
         !is_diff       TYPE ty_file_diff
       RETURNING
-        VALUE(ro_html) TYPE REF TO zcl_abapgit_html .
+        VALUE(ri_html) TYPE REF TO zif_abapgit_html .
     METHODS render_lines
       IMPORTING
         !is_diff       TYPE ty_file_diff
       RETURNING
-        VALUE(ro_html) TYPE REF TO zcl_abapgit_html .
+        VALUE(ri_html) TYPE REF TO zif_abapgit_html .
     METHODS render_line_split
       IMPORTING
         !is_diff_line  TYPE zif_abapgit_definitions=>ty_diff
       RETURNING
-        VALUE(ro_html) TYPE REF TO zcl_abapgit_html .
+        VALUE(ri_html) TYPE REF TO zif_abapgit_html .
     METHODS render_table_head
       RETURNING
         VALUE(ri_html) TYPE REF TO zif_abapgit_html .
@@ -112,37 +112,25 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
 
   METHOD apply_merged_content.
 
-    CONSTANTS: lc_replace TYPE string VALUE '<<new>>'.
+    DATA:
+      lv_merge_content    TYPE string,
+      lt_fields           TYPE tihttpnvp,
+      lv_new_file_content TYPE xstring.
 
-    DATA: BEGIN OF ls_filedata,
-            merge_content TYPE string,
-          END OF ls_filedata.
+    FIELD-SYMBOLS:
+      <ls_conflict>      TYPE zif_abapgit_definitions=>ty_merge_conflict.
 
-    DATA: lv_string           TYPE string,
-          lt_fields           TYPE tihttpnvp,
-          lv_new_file_content TYPE xstring.
+    lv_merge_content = ii_event->form_data( )->get( 'MERGE_CONTENT' ).
 
-    FIELD-SYMBOLS: <lv_postdata_line> LIKE LINE OF it_postdata,
-                   <ls_conflict>      TYPE zif_abapgit_definitions=>ty_merge_conflict.
+    REPLACE ALL OCCURRENCES
+      OF zif_abapgit_definitions=>c_crlf IN lv_merge_content WITH zif_abapgit_definitions=>c_newline.
 
-    LOOP AT it_postdata ASSIGNING <lv_postdata_line>.
-      lv_string = |{ lv_string }{ <lv_postdata_line> }|.
-    ENDLOOP.
-    REPLACE ALL OCCURRENCES OF zif_abapgit_definitions=>c_crlf    IN lv_string WITH lc_replace.
-    REPLACE ALL OCCURRENCES OF zif_abapgit_definitions=>c_newline IN lv_string WITH lc_replace.
-
-    lt_fields = zcl_abapgit_html_action_utils=>parse_fields_upper_case_name( lv_string ).
-    zcl_abapgit_html_action_utils=>get_field( EXPORTING iv_name = 'MERGE_CONTENT'
-                                                        it_field = lt_fields
-                                              CHANGING cg_field = ls_filedata ).
-    ls_filedata-merge_content = cl_http_utility=>unescape_url( escaped = ls_filedata-merge_content ).
-    REPLACE ALL OCCURRENCES OF lc_replace IN ls_filedata-merge_content WITH zif_abapgit_definitions=>c_newline.
-
-    lv_new_file_content = zcl_abapgit_convert=>string_to_xstring_utf8( ls_filedata-merge_content ).
+    lv_new_file_content = zcl_abapgit_convert=>string_to_xstring_utf8( lv_merge_content ).
 
     READ TABLE mt_conflicts ASSIGNING <ls_conflict> INDEX mv_current_conflict_index.
-    <ls_conflict>-result_sha1 = zcl_abapgit_hash=>sha1( iv_type = zif_abapgit_definitions=>c_type-blob
-                                                        iv_data = lv_new_file_content ).
+    <ls_conflict>-result_sha1 = zcl_abapgit_hash=>sha1(
+      iv_type = zif_abapgit_definitions=>c_type-blob
+      iv_data = lv_new_file_content ).
     <ls_conflict>-result_data = lv_new_file_content.
     mo_merge->resolve_conflict( <ls_conflict> ).
 
@@ -221,7 +209,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
     DATA: lv_beacon  TYPE string,
           lt_beacons TYPE zif_abapgit_definitions=>ty_string_tt.
 
-    CREATE OBJECT ro_html.
+    CREATE OBJECT ri_html TYPE zcl_abapgit_html.
 
     IF is_diff_line-beacon > 0.
       lt_beacons = is_diff-o_diff->get_beacons( ).
@@ -231,14 +219,14 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
     ENDIF.
 
 
-    ro_html->add( '<thead class="nav_line">' ).
-    ro_html->add( '<tr>' ).
+    ri_html->add( '<thead class="nav_line">' ).
+    ri_html->add( '<tr>' ).
 
-    ro_html->add( '<th class="num"></th>' ).
-    ro_html->add( |<th colspan="3">@@ { is_diff_line-new_num } @@ { lv_beacon }</th>| ).
+    ri_html->add( '<th class="num"></th>' ).
+    ri_html->add( |<th colspan="3">@@ { is_diff_line-new_num } @@ { lv_beacon }</th>| ).
 
-    ro_html->add( '</tr>' ).
-    ro_html->add( '</thead>' ).
+    ri_html->add( '</tr>' ).
+    ri_html->add( '</thead>' ).
 
   ENDMETHOD.
 
@@ -341,19 +329,19 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
 
     DATA: ls_stats TYPE zif_abapgit_definitions=>ty_count.
 
-    CREATE OBJECT ro_html.
+    CREATE OBJECT ri_html TYPE zcl_abapgit_html.
 
-    ro_html->add( '<div class="diff_head">' ).
+    ri_html->add( '<div class="diff_head">' ).
 
     IF is_diff-type <> 'binary' AND is_diff-o_diff IS NOT INITIAL.
       ls_stats = is_diff-o_diff->stats( ).
-      ro_html->add( |<span class="diff_banner diff_ins">+ { ls_stats-insert }</span>| ).
-      ro_html->add( |<span class="diff_banner diff_del">- { ls_stats-delete }</span>| ).
-      ro_html->add( |<span class="diff_banner diff_upd">~ { ls_stats-update }</span>| ).
+      ri_html->add( |<span class="diff_banner diff_ins">+ { ls_stats-insert }</span>| ).
+      ri_html->add( |<span class="diff_banner diff_del">- { ls_stats-delete }</span>| ).
+      ri_html->add( |<span class="diff_banner diff_upd">~ { ls_stats-update }</span>| ).
     ENDIF.
 
-    ro_html->add( |<span class="diff_name">{ is_diff-filename }</span>| ).
-    ro_html->add( '</div>' ).
+    ri_html->add( |<span class="diff_name">{ is_diff-filename }</span>| ).
+    ri_html->add( '</div>' ).
 
   ENDMETHOD.
 
@@ -367,7 +355,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
     FIELD-SYMBOLS <ls_diff>  LIKE LINE OF lt_diffs.
 
     lo_highlighter = zcl_abapgit_syntax_highlighter=>create( is_diff-filename ).
-    CREATE OBJECT ro_html.
+    CREATE OBJECT ri_html TYPE zcl_abapgit_html.
 
     lt_diffs = is_diff-o_diff->get( ).
 
@@ -378,7 +366,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
       ENDIF.
 
       IF lv_insert_nav = abap_true. " Insert separator line with navigation
-        ro_html->add( render_beacon( is_diff_line = <ls_diff>
+        ri_html->add( render_beacon( is_diff_line = <ls_diff>
                                      is_diff = is_diff ) ).
         lv_insert_nav = abap_false.
       ENDIF.
@@ -396,7 +384,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
       CONDENSE <ls_diff>-new_num. "get rid of leading spaces
       CONDENSE <ls_diff>-old_num.
 
-      ro_html->add( render_line_split( is_diff_line = <ls_diff> ) ).
+      ri_html->add( render_line_split( <ls_diff> ) ).
 
     ENDLOOP.
 
@@ -410,7 +398,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
           lv_mark TYPE string,
           lv_bg   TYPE string.
 
-    CREATE OBJECT ro_html.
+    CREATE OBJECT ri_html TYPE zcl_abapgit_html.
 
     " New line
     lv_mark = ` `.
@@ -438,10 +426,10 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
           && |<td class="code{ lv_bg }">{ lv_mark }{ is_diff_line-old }</td>|.
 
     " render line, inverse sides if remote is newer
-    ro_html->add( '<tr>' ).
-    ro_html->add( lv_old ). " Target
-    ro_html->add( lv_new ). " Source
-    ro_html->add( '</tr>' ).
+    ri_html->add( '<tr>' ).
+    ri_html->add( lv_old ). " Target
+    ri_html->add( lv_new ). " Source
+    ri_html->add( '</tr>' ).
 
   ENDMETHOD.
 
@@ -456,7 +444,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
 
     IF mv_merge_mode = c_merge_mode-selection.
       ri_html->add( '<form id="target_form" method="post" action="sapevent:apply_target">' ).
-      ri_html->add( '<th>Target - ' && mo_repo->get_branch_name( ) && ' - ' ).
+      ri_html->add( '<th>Target - ' && mo_repo->get_selected_branch( ) && ' - ' ).
       ri_html->add_a( iv_act = 'submitFormById(''target_form'');'
                       iv_txt = 'Apply'
                       iv_typ = zif_abapgit_html=>c_action_type-onclick
@@ -473,7 +461,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
       ri_html->add( '</th> ' ).
       ri_html->add( '</form>' ).
     ELSE.
-      ri_html->add( '<th>Target - ' && mo_repo->get_branch_name( ) && '</th> ' ).
+      ri_html->add( '<th>Target - ' && mo_repo->get_selected_branch( ) && '</th> ' ).
       ri_html->add( '<th class="num"></th>' ).
       ri_html->add( '<th>Source - ' && mo_merge->get_source_branch( ) && '</th> ' ).
     ENDIF.
@@ -538,15 +526,15 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
 
     FIELD-SYMBOLS: <ls_conflict> TYPE zif_abapgit_definitions=>ty_merge_conflict.
 
-    CASE iv_action.
+    CASE ii_event->mv_action.
       WHEN c_actions-apply_merge
         OR c_actions-apply_source
         OR c_actions-apply_target
         OR c_actions-cancel.
 
-        CASE iv_action.
+        CASE ii_event->mv_action.
           WHEN c_actions-apply_merge.
-            apply_merged_content( it_postdata ).
+            apply_merged_content( ii_event ).
 
           WHEN c_actions-apply_source.
             READ TABLE mt_conflicts ASSIGNING <ls_conflict> INDEX mv_current_conflict_index.
@@ -568,15 +556,15 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_MERGE_RES IMPLEMENTATION.
         ENDIF.
 
         IF mv_current_conflict_index IS NOT INITIAL.
-          ev_state = zcl_abapgit_gui=>c_event_state-re_render.
+          rs_handled-state = zcl_abapgit_gui=>c_event_state-re_render.
         ELSE.
-          ei_page = mo_merge_page.
-          ev_state = zcl_abapgit_gui=>c_event_state-go_back.
+          rs_handled-page = mo_merge_page.
+          rs_handled-state = zcl_abapgit_gui=>c_event_state-go_back.
         ENDIF.
 
       WHEN c_actions-toggle_mode.
         toggle_merge_mode( ).
-        ev_state = zcl_abapgit_gui=>c_event_state-re_render.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-re_render.
 
     ENDCASE.
 

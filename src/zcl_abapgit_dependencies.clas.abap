@@ -23,7 +23,7 @@ CLASS zcl_abapgit_dependencies DEFINITION
         kind     TYPE c LENGTH 1,
       END OF ty_dependency .
     TYPES:
-      tty_dedenpency TYPE STANDARD TABLE OF ty_dependency
+      ty_dedenpencies TYPE STANDARD TABLE OF ty_dependency
                                  WITH NON-UNIQUE DEFAULT KEY .
     TYPES:
       BEGIN OF ty_item,
@@ -41,7 +41,7 @@ CLASS zcl_abapgit_dependencies DEFINITION
       IMPORTING
         iv_ddls_name         TYPE tadir-obj_name
       RETURNING
-        VALUE(rt_dependency) TYPE tty_dedenpency .
+        VALUE(rt_dependency) TYPE ty_dedenpencies.
     CLASS-METHODS resolve_packages
       CHANGING
         ct_tadir TYPE zif_abapgit_definitions=>ty_tadir_tt.
@@ -49,7 +49,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_abapgit_dependencies IMPLEMENTATION.
+CLASS ZCL_ABAPGIT_DEPENDENCIES IMPLEMENTATION.
 
 
   METHOD get_ddls_dependencies.
@@ -73,6 +73,7 @@ CLASS zcl_abapgit_dependencies IMPLEMENTATION.
     FIELD-SYMBOLS: <ls_tadir> LIKE LINE OF ct_tadir.
 
     " misuse field KORRNUM to fix deletion sequence
+    " higher value means later deletion
 
     LOOP AT ct_tadir ASSIGNING <ls_tadir>.
       CASE <ls_tadir>-object.
@@ -86,18 +87,9 @@ CLASS zcl_abapgit_dependencies IMPLEMENTATION.
           <ls_tadir>-korrnum = '810000'.
         WHEN 'DTEL'.
           <ls_tadir>-korrnum = '800000'.
-        WHEN 'DCLS'.
-          " AUTH and SUSO after DCLS
-          <ls_tadir>-korrnum = '705000'.
-        WHEN 'SUSO'.
-          " SUSO after DCLS
-          <ls_tadir>-korrnum = '710000'.
-        WHEN 'AUTH'.
-          " AUTH after DCLS
-          <ls_tadir>-korrnum = '715000'.
-        WHEN 'DDLS'.
-          " DDLS after DCLS but before other DDIC
-          <ls_tadir>-korrnum = '720000'.
+        WHEN 'SHLP'.
+          " SHLP after TABL
+          <ls_tadir>-korrnum = '760000'.
         WHEN 'TTYP' OR 'TABL' OR 'VIEW'.
           SELECT SINGLE tabclass FROM dd02l
             INTO lv_tabclass
@@ -110,6 +102,18 @@ CLASS zcl_abapgit_dependencies IMPLEMENTATION.
           ELSE.
             <ls_tadir>-korrnum = '750000'.
           ENDIF.
+        WHEN 'DDLS'.
+          " DDLS after DCLS but before other DDIC
+          <ls_tadir>-korrnum = '720000'.
+        WHEN 'AUTH'.
+          " AUTH after DCLS
+          <ls_tadir>-korrnum = '715000'.
+        WHEN 'SUSO'.
+          " SUSO after DCLS
+          <ls_tadir>-korrnum = '710000'.
+        WHEN 'DCLS'.
+          " AUTH and SUSO after DCLS
+          <ls_tadir>-korrnum = '705000'.
         WHEN 'IASP'.
           <ls_tadir>-korrnum = '552000'.
         WHEN 'IARP'.
@@ -130,10 +134,18 @@ CLASS zcl_abapgit_dependencies IMPLEMENTATION.
           IF sy-subrc = 0.
             <ls_tadir>-korrnum = '200000'.
           ELSE.
-            <ls_tadir>-korrnum = '100000'.
+            <ls_tadir>-korrnum = '180000'.
           ENDIF.
         WHEN 'IDOC'.
           <ls_tadir>-korrnum = '200000'.
+        WHEN 'WDCA'.
+          <ls_tadir>-korrnum = '174000'.
+        WHEN 'WDYA'.
+          <ls_tadir>-korrnum = '173000'.
+        WHEN 'WDCC'.
+          <ls_tadir>-korrnum = '172000'.
+        WHEN 'WDYN'.
+          <ls_tadir>-korrnum = '171000'.
         WHEN 'IEXT'.
           <ls_tadir>-korrnum = '150000'.
         WHEN OTHERS.
@@ -167,7 +179,7 @@ CLASS zcl_abapgit_dependencies IMPLEMENTATION.
           lv_before       TYPE i,
           lt_founds       TYPE TABLE OF rsfindlst,
           lt_scope        TYPE STANDARD TABLE OF seu_obj,
-          lt_dependency   TYPE tty_dedenpency.
+          lt_dependency   TYPE ty_dedenpencies.
 
     FIELD-SYMBOLS: <ls_tadir_ddls>      TYPE zif_abapgit_definitions=>ty_tadir,
                    <ls_dependency>      TYPE ty_dependency,

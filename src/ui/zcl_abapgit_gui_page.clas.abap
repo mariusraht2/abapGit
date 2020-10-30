@@ -70,7 +70,7 @@ CLASS zcl_abapgit_gui_page DEFINITION PUBLIC ABSTRACT
         zcx_abapgit_exception .
     METHODS scripts
       RETURNING
-        VALUE(ro_html) TYPE REF TO zcl_abapgit_html
+        VALUE(ri_html) TYPE REF TO zif_abapgit_html
       RAISING
         zcx_abapgit_exception .
 ENDCLASS.
@@ -161,7 +161,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE IMPLEMENTATION.
 
   METHOD render_deferred_parts.
 
-    DATA lt_parts TYPE zif_abapgit_html=>tty_table_of.
+    DATA lt_parts TYPE zif_abapgit_html=>ty_table_of.
     DATA li_part LIKE LINE OF lt_parts.
 
     lt_parts = gui_services( )->get_html_parts( )->get_parts( iv_part_category ).
@@ -213,7 +213,7 @@ CLASS ZCL_ABAPGIT_GUI_PAGE IMPLEMENTATION.
 
   METHOD render_link_hints.
 
-    DATA: lv_link_hint_key TYPE char01.
+    DATA: lv_link_hint_key TYPE c LENGTH 1.
 
     lv_link_hint_key = mo_settings->get_link_hint_key( ).
 
@@ -230,14 +230,14 @@ CLASS ZCL_ABAPGIT_GUI_PAGE IMPLEMENTATION.
 
   METHOD scripts.
 
-    CREATE OBJECT ro_html.
+    CREATE OBJECT ri_html TYPE zcl_abapgit_html.
 
     render_deferred_parts(
-      ii_html          = ro_html
+      ii_html          = ri_html
       iv_part_category = c_html_parts-scripts ).
 
-    render_link_hints( ro_html ).
-    render_command_palettes( ro_html ).
+    render_link_hints( ri_html ).
+    render_command_palettes( ri_html ).
 
   ENDMETHOD.
 
@@ -276,27 +276,27 @@ CLASS ZCL_ABAPGIT_GUI_PAGE IMPLEMENTATION.
 
   METHOD zif_abapgit_gui_event_handler~on_event.
 
-    CASE iv_action.
+    CASE ii_event->mv_action.
       WHEN zif_abapgit_definitions=>c_action-goto_source.
 
         IF mo_exception_viewer IS BOUND.
           mo_exception_viewer->goto_source( ).
         ENDIF.
-        ev_state = zcl_abapgit_gui=>c_event_state-no_more_act.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-no_more_act.
 
       WHEN zif_abapgit_definitions=>c_action-show_callstack.
 
         IF mo_exception_viewer IS BOUND.
           mo_exception_viewer->show_callstack( ).
         ENDIF.
-        ev_state = zcl_abapgit_gui=>c_event_state-no_more_act.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-no_more_act.
 
       WHEN zif_abapgit_definitions=>c_action-goto_message.
 
         IF mo_exception_viewer IS BOUND.
           mo_exception_viewer->goto_message( ).
         ENDIF.
-        ev_state = zcl_abapgit_gui=>c_event_state-no_more_act.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-no_more_act.
 
     ENDCASE.
 

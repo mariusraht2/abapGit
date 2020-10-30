@@ -279,8 +279,7 @@ CLASS ZCL_ABAPGIT_OBJECT_WDCC IMPLEMENTATION.
 
     DATA: lt_enq   TYPE STANDARD TABLE OF seqg3,
           lv_subrc TYPE sysubrc,
-          lv_garg  TYPE eqegraarg,
-          lv_lines TYPE i.
+          lv_garg  TYPE eqegraarg.
 
     lv_garg = ms_item-obj_name.
 
@@ -300,12 +299,7 @@ CLASS ZCL_ABAPGIT_OBJECT_WDCC IMPLEMENTATION.
       zcx_abapgit_exception=>raise( 'Error check object lock WDCC: ' && ms_item-obj_name ).
     ENDIF.
 
-    DESCRIBE TABLE lt_enq LINES lv_lines.
-    IF lv_lines > 0.
-      rv_is_locked = abap_true.
-    ELSE.
-      rv_is_locked = abap_false.
-    ENDIF.
+    rv_is_locked = boolc( lines( lt_enq ) > 0 ).
 
   ENDMETHOD.
 

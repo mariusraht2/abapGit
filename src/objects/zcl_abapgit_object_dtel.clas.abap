@@ -8,16 +8,16 @@ CLASS zcl_abapgit_object_dtel DEFINITION PUBLIC INHERITING FROM zcl_abapgit_obje
   PRIVATE SECTION.
 
     TYPES:
-      BEGIN OF ty_dd04_texts,
+      BEGIN OF ty_dd04_text,
         ddlanguage TYPE dd04t-ddlanguage,
         ddtext     TYPE dd04t-ddtext,
         reptext    TYPE dd04t-reptext,
         scrtext_s  TYPE dd04t-scrtext_s,
         scrtext_m  TYPE dd04t-scrtext_m,
         scrtext_l  TYPE dd04t-scrtext_l,
-      END OF ty_dd04_texts .
+      END OF ty_dd04_text .
     TYPES:
-      tt_dd04_texts TYPE STANDARD TABLE OF ty_dd04_texts .
+      ty_dd04_texts TYPE STANDARD TABLE OF ty_dd04_text .
 
     CONSTANTS c_longtext_id_dtel TYPE dokil-id VALUE 'DE' ##NO_TEXT.
 
@@ -44,7 +44,7 @@ CLASS ZCL_ABAPGIT_OBJECT_DTEL IMPLEMENTATION.
     DATA: lv_name       TYPE ddobjname,
           ls_dd04v_tmp  TYPE dd04v,
           lt_i18n_langs TYPE TABLE OF langu,
-          lt_dd04_texts TYPE tt_dd04_texts.
+          lt_dd04_texts TYPE ty_dd04_texts.
 
     FIELD-SYMBOLS: <lv_lang>      LIKE LINE OF lt_i18n_langs,
                    <ls_dd04_text> LIKE LINE OF lt_dd04_texts.
@@ -94,7 +94,7 @@ CLASS ZCL_ABAPGIT_OBJECT_DTEL IMPLEMENTATION.
     DATA: lv_name       TYPE ddobjname,
           lv_index      TYPE i,
           ls_dd04v      TYPE dd04v,
-          lt_dd04_texts TYPE tt_dd04_texts,
+          lt_dd04_texts TYPE ty_dd04_texts,
           lt_i18n_langs TYPE TABLE OF langu.
 
     FIELD-SYMBOLS: <lv_lang>      LIKE LINE OF lt_i18n_langs,
@@ -224,12 +224,19 @@ CLASS ZCL_ABAPGIT_OBJECT_DTEL IMPLEMENTATION.
     DATA: lv_rollname TYPE dd04l-rollname.
 
     lv_rollname = ms_item-obj_name.
+
+    " Check nametab because it's fast
     CALL FUNCTION 'DD_GET_NAMETAB_HEADER'
       EXPORTING
         tabname   = lv_rollname
       EXCEPTIONS
         not_found = 1
         OTHERS    = 2.
+    IF sy-subrc <> 0.
+      " Check for inactive or modified versions
+      SELECT SINGLE rollname FROM dd04l INTO lv_rollname
+        WHERE rollname = lv_rollname.
+    ENDIF.
     rv_bool = boolc( sy-subrc = 0 ).
 
   ENDMETHOD.
@@ -327,7 +334,7 @@ CLASS ZCL_ABAPGIT_OBJECT_DTEL IMPLEMENTATION.
 
     serialize_texts( io_xml ).
 
-    serialize_longtexts( io_xml         = io_xml
+    serialize_longtexts( ii_xml         = io_xml
                          iv_longtext_id = c_longtext_id_dtel ).
 
   ENDMETHOD.

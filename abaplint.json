@@ -72,6 +72,24 @@
     "globalMacros": []
   },
   "rules": {
+    "sy_modification": false,
+    "call_transaction_authority_check": true,
+    "function_module_recommendations": false,
+    "method_overwrites_builtin": false,
+    "omit_parameter_name": false,
+    "omit_receiving": true,
+    "unused_methods": false,
+    "identical_contents": false,
+    "many_parenthesis": true,
+    "prefer_xsdbool": true,
+    "prefer_is_not": false,
+    "use_bool_expression": true,
+    "check_subrc": false,
+    "cyclomatic_complexity": {
+      "max": 25
+    },
+    "identical_conditions": true,
+    "use_line_exists": true,
     "line_break_style": true,
     "forbidden_pseudo_and_pragma": {
       "ignoreGlobalClassDefinition": true,
@@ -91,7 +109,8 @@
     "forbidden_void_type": {
       "check": ["^stringtab$", "^SYCHAR01$", "^char2$", "^char20$", "^int4$", "^SYREPID$",
         "^flag$", "^char12$", "^char10$", "^char70$", "^char4$", "^sydatum$", "^syuzeit$",
-        "^numc2$"]
+        "^syst_title$", "^sychar70$", "^char30$", "^char50$",
+        "^numc2$", "^sap_bool$", "^SYCHAR10$", "^sylangu$"]
     },
     "forbidden_identifier": true,
     "try_without_catch": true,
@@ -124,7 +143,9 @@
     },
     "check_abstract": true,
     "check_text_elements": true,
-    "types_naming": false,
+    "types_naming": {
+      "pattern": "^TY_.+$"
+    },
     "7bit_ascii": {
       "exclude": ["zcl_abapgit_utils.clas.testclasses.abap"]
     },
@@ -151,6 +172,7 @@
       "communication": true,
       "systemCall": true,
       "defaultKey": false,
+      "describeLines": true,
       "break": true,
       "statics": true
     },
@@ -287,6 +309,8 @@
       "add": true,
       "subtract": true,
       "multiply": true,
+      "typePools": true,
+      "load": true,
       "move": true,
       "divide": true,
       "fieldSymbolStructure": true,

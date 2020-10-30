@@ -60,7 +60,8 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SYNTAX IMPLEMENTATION.
     CREATE OBJECT ri_html TYPE zcl_abapgit_html.
 
     ri_html->add( `<div class="repo">` ).
-    ri_html->add( zcl_abapgit_gui_chunk_lib=>render_repo_top( mo_repo ) ).
+    ri_html->add( zcl_abapgit_gui_chunk_lib=>render_repo_top( io_repo        = mo_repo
+                                                              iv_show_commit = abap_false ) ).
     ri_html->add( `</div>` ).
 
     ri_html->add( '<div class="toc">' ).
@@ -92,23 +93,14 @@ CLASS ZCL_ABAPGIT_GUI_PAGE_SYNTAX IMPLEMENTATION.
 
   METHOD zif_abapgit_gui_event_handler~on_event.
 
-    CASE iv_action.
+    CASE ii_event->mv_action.
       WHEN c_actions-rerun.
 
         run_syntax_check( ).
-
-        ei_page = me.
-        ev_state = zcl_abapgit_gui=>c_event_state-re_render.
+        rs_handled-state = zcl_abapgit_gui=>c_event_state-re_render.
 
       WHEN OTHERS.
-        super->zif_abapgit_gui_event_handler~on_event(
-          EXPORTING
-            iv_action             = iv_action
-            iv_getdata            = iv_getdata
-            it_postdata           = it_postdata
-          IMPORTING
-            ei_page               = ei_page
-            ev_state              = ev_state ).
+        rs_handled = super->zif_abapgit_gui_event_handler~on_event( ii_event ).
     ENDCASE.
 
   ENDMETHOD.
